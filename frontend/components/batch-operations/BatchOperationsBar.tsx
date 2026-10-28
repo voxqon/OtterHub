@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import {
   Download,
@@ -79,14 +80,25 @@ const typeIcons: Record<FileType, typeof ImageIcon> = {
 
 // 文件类型名称映射
 const typeNames: Record<FileType, string> = {
-  [FileType.Image]: "图片",
-  [FileType.Audio]: "音频",
-  [FileType.Video]: "视频",
-  [FileType.Document]: "文档",
-  [FileType.Trash]: "回收站",
+  get [FileType.Image]() {
+    return t("图片");
+  },
+  get [FileType.Audio]() {
+    return t("音频");
+  },
+  get [FileType.Video]() {
+    return t("视频");
+  },
+  get [FileType.Document]() {
+    return t("文档");
+  },
+  get [FileType.Trash]() {
+    return t("回收站");
+  },
 };
 
 export function BatchOperationsBar() {
+  useLocale();
   const { activeType, updateFileMetadata, moveToTrashLocal, deleteFilesLocal } =
     useFileDataStore();
 
@@ -198,7 +210,7 @@ export function BatchOperationsBar() {
     files: Array<{ key: string; metadata: FileMetadata }>,
     dirHandleResult?: DirectoryHandleResult
   ) => {
-    const toastId = toast.loading(`准备下载 ${files.length} 个文件...`);
+    const toastId = toast.loading(t("准备下载 {0} 个文件...", files.length));
     let downloadDirName: string | null = null;
 
     try {
@@ -207,16 +219,16 @@ export function BatchOperationsBar() {
         getUrl: getFileDownloadUrl,
         onDirectorySelected: (dirName: string) => {
           downloadDirName = dirName;
-          toast.loading(`正在下载到 ${dirName}...`, { id: toastId });
+          toast.loading(t("正在下载到 {0}...", dirName), { id: toastId });
         },
         onDirectoryReused: (dirName: string) => {
           downloadDirName = dirName;
-          toast.loading(`正在下载到 ${dirName}...`, { id: toastId });
+          toast.loading(t("正在下载到 {0}...", dirName), { id: toastId });
         },
         onFileStart: (index: number, fileName: string) => {
           const prefix = downloadDirName
-            ? `下载到 ${downloadDirName}`
-            : "下载中";
+            ? t("下载到 {0}", downloadDirName)
+            : t("下载中");
           toast.loading(
             `${prefix} (${index + 1}/${files.length}): ${fileName}`,
             {
@@ -226,7 +238,7 @@ export function BatchOperationsBar() {
         },
         onFileComplete: (index: number, fileName: string, success: boolean) => {
           if (!success) {
-            toast.error(`下载失败: ${fileName}`, { duration: 2000 });
+            toast.error(t("下载失败: {0}", fileName), { duration: 2000 });
           }
         },
       };
@@ -236,13 +248,19 @@ export function BatchOperationsBar() {
         : await downloadFiles(downloadOptions);
 
       if (result.cancelled > 0) {
-        toast.info(`下载已取消`, { id: toastId });
+        toast.info(t("下载已取消"), { id: toastId });
       } else if (result.failed === 0) {
-        toast.success(`成功下载 ${result.success} 个文件`, { id: toastId });
-      } else {
-        toast.warning(`部分文件下载失败`, {
+        toast.success(t("成功下载 {0} 个文件", result.success), {
           id: toastId,
-          description: `成功 ${result.success} 个，失败 ${result.failed} 个`,
+        });
+      } else {
+        toast.warning(t("部分文件下载失败"), {
+          id: toastId,
+          description: t(
+            "成功 {0} 个，失败 {1} 个",
+            result.success,
+            result.failed
+          ),
         });
       }
     } catch (error) {
@@ -252,7 +270,7 @@ export function BatchOperationsBar() {
         setPendingDownloadFiles(files);
         setShowDirGuide(true);
       } else {
-        toast.error("批量下载失败", { id: toastId });
+        toast.error(t("批量下载失败"), { id: toastId });
       }
     }
   };
@@ -289,7 +307,7 @@ export function BatchOperationsBar() {
 
     if (files.length === 1) {
       const [{ key, metadata }] = files;
-      const toastId = toast.loading(`准备下载: ${metadata.fileName}`);
+      const toastId = toast.loading(t("准备下载: {0}", metadata.fileName));
 
       try {
         const result = await downloadFile(
@@ -297,8 +315,13 @@ export function BatchOperationsBar() {
           metadata,
           (progress) => {
             const message = progress.dirName
-              ? `下载到 ${progress.dirName}: ${metadata.fileName} (${progress.percentage}%)`
-              : `下载中: ${metadata.fileName} (${progress.percentage}%)`;
+              ? t(
+                  "下载到 {0}: {1} ({2}%)",
+                  progress.dirName,
+                  metadata.fileName,
+                  progress.percentage
+                )
+              : t("下载中: {0} ({1}%)", metadata.fileName, progress.percentage);
             toast.loading(message, { id: toastId });
           }
         );
@@ -307,17 +330,17 @@ export function BatchOperationsBar() {
           return;
         }
         const message = result.dirName
-          ? `下载完成: ${metadata.fileName}，已保存到 ${result.dirName}`
-          : `下载完成: ${metadata.fileName}`;
+          ? t("下载完成: {0}，已保存到 {1}", metadata.fileName, result.dirName)
+          : t("下载完成: {0}", metadata.fileName);
         toast.success(message, { id: toastId });
       } catch (_error) {
-        toast.error(`下载失败: ${metadata.fileName}`, { id: toastId });
+        toast.error(t("下载失败: {0}", metadata.fileName), { id: toastId });
       }
       return;
     }
 
     if (files.length > MAX_FILES_IN_BUNDLE) {
-      toast.error(`批量下载最多支持 ${MAX_FILES_IN_BUNDLE} 个文件`);
+      toast.error(t("批量下载最多支持 {0} 个文件", MAX_FILES_IN_BUNDLE));
       return;
     }
 
@@ -341,12 +364,12 @@ export function BatchOperationsBar() {
       .map((s) => `${typeNames[s.type]}:${s.count}`)
       .join("，");
     const confirmMsg = hasCrossTypeSelection
-      ? `确认删除这 ${totalCount} 个文件？\n（${statsText}）`
-      : `确认删除这 ${totalCount} 个文件？`;
+      ? t("确认删除这 {0} 个文件？\n（{1}）", totalCount, statsText)
+      : t("确认删除这 {0} 个文件？", totalCount);
 
     if (!confirm(confirmMsg)) return;
 
-    const toastId = toast.loading(`正在删除 ${totalCount} 个文件...`);
+    const toastId = toast.loading(t("正在删除 {0} 个文件...", totalCount));
 
     try {
       const successful: string[] = [];
@@ -367,7 +390,7 @@ export function BatchOperationsBar() {
           }
         },
         (current, total) => {
-          toast.loading(`正在删除 ${current}/${total} 个文件...`, {
+          toast.loading(t("正在删除 {0}/{1} 个文件...", current, total), {
             id: toastId,
           });
         },
@@ -384,17 +407,23 @@ export function BatchOperationsBar() {
       removeSelectionFromAllTypes(successful);
 
       if (failed.length === 0) {
-        toast.success(`成功删除 ${successful.length} 个文件`, { id: toastId });
-      } else {
-        toast.error(`部分文件删除失败`, {
+        toast.success(t("成功删除 {0} 个文件", successful.length), {
           id: toastId,
-          description: `${failed.length} 个文件删除失败，成功删除 ${successful.length} 个`,
+        });
+      } else {
+        toast.error(t("部分文件删除失败"), {
+          id: toastId,
+          description: t(
+            "{0} 个文件删除失败，成功删除 {1} 个",
+            failed.length,
+            successful.length
+          ),
         });
       }
     } catch (_error) {
-      toast.error("操作失败", {
+      toast.error(t("操作失败"), {
         id: toastId,
-        description: "执行批量删除时发生未知错误",
+        description: t("执行批量删除时发生未知错误"),
       });
     }
   };
@@ -406,16 +435,21 @@ export function BatchOperationsBar() {
       .map((s) => `${typeNames[s.type]}:${s.count}`)
       .join("，");
     const confirmMsg = hasCrossTypeSelection
-      ? `确认【彻底删除】这 ${totalCount} 个文件？此操作不可恢复！\n（${statsText}）`
-      : `确认【彻底删除】这 ${totalCount} 个文件？此操作不可恢复！`;
+      ? t(
+          "确认【彻底删除】这 {0} 个文件？此操作不可恢复！\n（{1}）",
+          totalCount,
+          statsText
+        )
+      : t("确认【彻底删除】这 {0} 个文件？此操作不可恢复！", totalCount);
 
     if (!confirm(confirmMsg)) return;
 
-    const toastId = toast.loading(`正在删除 ${totalCount} 个文件...`);
+    const toastId = toast.loading(t("正在删除 {0} 个文件...", totalCount));
 
     try {
       const successful: string[] = [];
       const failed: string[] = [];
+      let failureReason = "";
 
       await processBatch(
         totalSelectedKeys,
@@ -427,12 +461,13 @@ export function BatchOperationsBar() {
             } else {
               failed.push(key);
             }
-          } catch (_err) {
+          } catch (error) {
             failed.push(key);
+            if (error instanceof Error) failureReason = error.message;
           }
         },
         (current, total) => {
-          toast.loading(`正在彻底删除 ${current}/${total} 个文件...`, {
+          toast.loading(t("正在彻底删除 {0}/{1} 个文件...", current, total), {
             id: toastId,
           });
         },
@@ -447,19 +482,28 @@ export function BatchOperationsBar() {
       removeSelectionFromAllTypes(successful);
 
       if (failed.length === 0) {
-        toast.success(`成功彻底删除 ${successful.length} 个文件`, {
+        toast.success(t("成功彻底删除 {0} 个文件", successful.length), {
           id: toastId,
         });
       } else {
-        toast.error(`部分文件删除失败`, {
+        toast.error(t("部分文件删除失败"), {
           id: toastId,
-          description: `${failed.length} 个文件彻底删除失败，成功删除 ${successful.length} 个`,
+          description: [
+            t(
+              "{0} 个文件彻底删除失败，成功删除 {1} 个",
+              failed.length,
+              successful.length
+            ),
+            failureReason,
+          ]
+            .filter(Boolean)
+            .join("\n"),
         });
       }
     } catch (_error) {
-      toast.error("操作失败", {
+      toast.error(t("操作失败"), {
         id: toastId,
-        description: "执行批量彻底删除时发生未知错误",
+        description: t("执行批量彻底删除时发生未知错误"),
       });
     }
   };
@@ -477,7 +521,7 @@ export function BatchOperationsBar() {
     const text = urls.join("\n");
     await navigator.clipboard.writeText(text);
 
-    toast.success(`已复制 ${urls.length} 个文件链接`);
+    toast.success(t("已复制 {0} 个文件链接", urls.length));
   };
 
   /** ===== 类型统计标签组件 ===== */
@@ -490,13 +534,14 @@ export function BatchOperationsBar() {
     count: number;
     onClear?: () => void;
   }) => {
+    useLocale();
     const Icon = typeIcons[type];
     return (
       <Badge
         variant="secondary"
         className="group gap-1 bg-white/20 text-primary-foreground border-none cursor-pointer transition-colors"
         onClick={onClear}
-        title={`清空选中「${typeNames[type]}」`}
+        title={t("清空选中「{0}」", typeNames[type])}
       >
         <Icon className="h-3 w-3 group-hover:hidden" />
         <span className="group-hover:hidden">{count}</span>
@@ -513,7 +558,7 @@ export function BatchOperationsBar() {
           {/* 选中统计 */}
           <div className="flex items-center gap-2">
             <span className="text-xs md:text-sm font-medium text-primary-foreground whitespace-nowrap">
-              选中 {totalCount} 项
+              {t("已选择 {0} 项", totalCount)}
             </span>
             {/* 跨类型统计标签 */}
             {selectedStats.length > 0 && (
@@ -536,10 +581,10 @@ export function BatchOperationsBar() {
               variant="ghost"
               className="text-primary-foreground hover:bg-primary-foreground/10 px-2 md:px-3"
               onClick={handleBatchDownload}
-              title="下载"
+              title={t("下载")}
             >
               <Download className="md:mr-2 h-4 w-4" />
-              <span className="hidden md:inline">下载</span>
+              <span className="hidden md:inline">{t("下载")}</span>
             </Button>
 
             <Button
@@ -547,10 +592,10 @@ export function BatchOperationsBar() {
               variant="ghost"
               className="text-primary-foreground hover:bg-primary-foreground/10 px-2 md:px-3"
               onClick={handleBatchDelete}
-              title="删除"
+              title={t("删除")}
             >
               <Trash2 className="md:mr-2 h-4 w-4 text-red-400" />
-              <span className="hidden md:inline">删除</span>
+              <span className="hidden md:inline">{t("删除")}</span>
             </Button>
 
             <div className="h-6 w-px bg-primary-foreground/20 mx-1" />
@@ -583,7 +628,7 @@ export function BatchOperationsBar() {
                   className="cursor-pointer text-foreground hover:bg-secondary/50"
                 >
                   <Check className="mr-2 h-4 w-4 text-blue-400" />
-                  {isAllSelected ? "取消本页全选" : "全选当前页"}
+                  {isAllSelected ? t("取消本页全选") : t("全选当前页")}
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
@@ -591,7 +636,7 @@ export function BatchOperationsBar() {
                   className="cursor-pointer text-foreground hover:bg-secondary/50"
                 >
                   <Tag className="mr-2 h-4 w-4 text-blue-400" />
-                  编辑标签
+                  {t("编辑标签")}
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
@@ -599,13 +644,15 @@ export function BatchOperationsBar() {
                   className="cursor-pointer text-foreground hover:bg-secondary/50"
                 >
                   <FilePen className="mr-2 h-4 w-4 text-blue-400" />
-                  重命名
+                  {t("重命名")}
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
                   onClick={() => {
                     if (totalSelectedKeys.length > MAX_FILES_IN_BUNDLE) {
-                      toast.error(`最多支持 ${MAX_FILES_IN_BUNDLE} 个文件`);
+                      toast.error(
+                        t("最多支持 {0} 个文件", MAX_FILES_IN_BUNDLE)
+                      );
                       return;
                     }
                     setShowBatchShare(true);
@@ -613,7 +660,7 @@ export function BatchOperationsBar() {
                   className="cursor-pointer text-foreground hover:bg-secondary/50"
                 >
                   <Share2 className="mr-2 h-4 w-4 text-blue-400" />
-                  打包分享
+                  {t("打包分享")}
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
@@ -621,7 +668,7 @@ export function BatchOperationsBar() {
                   className="cursor-pointer text-foreground hover:bg-secondary/50"
                 >
                   <Copy className="mr-2 h-4 w-4 text-blue-400" />
-                  复制链接
+                  {t("复制链接")}
                 </DropdownMenuItem>
 
                 <div className="my-1 h-px bg-border" />
@@ -631,7 +678,7 @@ export function BatchOperationsBar() {
                   className="cursor-pointer text-red-500 hover:bg-red-50 focus:text-red-500 focus:bg-red-50"
                 >
                   <Trash2 className="mr-2 h-4 w-4 text-red-500" />
-                  彻底删除
+                  {t("彻底删除")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -641,7 +688,7 @@ export function BatchOperationsBar() {
               variant="ghost"
               className="text-primary-foreground hover:bg-primary-foreground/10"
               onClick={clearAllSelection}
-              title="清空全部选中"
+              title={t("清空全部选中")}
             >
               <X className="h-4 w-4" />
             </Button>

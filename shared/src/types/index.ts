@@ -48,6 +48,12 @@ export type FileMetadata = {
   chunkInfo?: ChunkInfo; // 分片信息（大文件分片上传时使用）
   thumbUrl?: string; // 缩略图URL
   desc?: string; // 图片简短描述（上传后 AI 自动分析填充）
+  telegramMessages?: TelegramMessageRef[];
+};
+
+export type TelegramMessageRef = {
+  chatId: string | number;
+  messageId: number;
 };
 
 export enum FileTag {
@@ -88,6 +94,7 @@ export type Chunk = {
   idx: number;
   file_id: string; // Telegram: file_id / R2: chunk key
   size: number; // 分片大小
+  telegramMessage?: TelegramMessageRef;
 };
 
 export type UploadedChunk = Chunk & { thumbUrl?: string };

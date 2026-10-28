@@ -1,4 +1,14 @@
-import { Loader2, RotateCw, Music, Video, FileText, ImageIcon } from "lucide-react";
+"use client";
+
+import { t, useLocale } from "@/lib/i18n";
+import {
+  Loader2,
+  RotateCw,
+  Music,
+  Video,
+  FileText,
+  ImageIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileTagBadge } from "@/components/FileTagBadge";
 import { FileDetailDialog } from "@/components/file-card/FileDetailDialog";
@@ -15,6 +25,7 @@ interface FileCardListProps {
 }
 
 export function FileCardList({ file, actions }: FileCardListProps) {
+  useLocale();
   const {
     isSelected,
     fileType,
@@ -37,14 +48,18 @@ export function FileCardList({ file, actions }: FileCardListProps) {
   } = actions;
 
   const tags = file.metadata?.tags ?? [];
-  
+
   // 根据文件类型获取对应的图标
   const getFileIcon = () => {
     switch (fileType) {
-      case FileType.Audio: return <Music className="h-4 w-4 text-emerald-400" />;
-      case FileType.Video: return <Video className="h-4 w-4 text-purple-400" />;
-      case FileType.Image: return <ImageIcon className="h-4 w-4 text-blue-400" />;
-      default: return <FileText className="h-4 w-4 text-amber-400" />;
+      case FileType.Audio:
+        return <Music className="h-4 w-4 text-emerald-400" />;
+      case FileType.Video:
+        return <Video className="h-4 w-4 text-purple-400" />;
+      case FileType.Image:
+        return <ImageIcon className="h-4 w-4 text-blue-400" />;
+      default:
+        return <FileText className="h-4 w-4 text-amber-400" />;
     }
   };
 
@@ -55,7 +70,7 @@ export function FileCardList({ file, actions }: FileCardListProps) {
           "group flex items-center gap-4 px-4 py-3 rounded-xl backdrop-blur-xl border transition-all duration-200 cursor-pointer shadow-xs",
           isSelected
             ? "bg-primary/20 border-primary shadow-sm shadow-primary/10"
-            : "bg-card/40 border-glass-border hover:border-primary/40 hover:bg-card/70 hover:shadow-sm",
+            : "bg-card/40 border-glass-border hover:border-primary/40 hover:bg-card/70 hover:shadow-sm"
         )}
         onClick={handleSelect}
       >
@@ -66,13 +81,23 @@ export function FileCardList({ file, actions }: FileCardListProps) {
 
         {/* File Info */}
         <div className="flex-1 min-w-0 flex flex-col gap-1">
-          <p className={cn("text-sm font-semibold truncate leading-tight transition-all duration-300 text-foreground", blur && "blur-xs select-none opacity-80")} title={file.metadata?.fileName}>
+          <p
+            className={cn(
+              "text-sm font-semibold truncate leading-tight transition-all duration-300 text-foreground",
+              blur && "blur-xs select-none opacity-80"
+            )}
+            title={file.metadata?.fileName}
+          >
             {file.metadata?.fileName}
           </p>
           <div className="flex items-center gap-2 text-[11px] text-foreground/50 leading-none">
-            <span className="shrink-0 font-medium">{formatFileSize(file.metadata?.fileSize || 0)}</span>
+            <span className="shrink-0 font-medium">
+              {formatFileSize(file.metadata?.fileSize || 0)}
+            </span>
             <span className="text-foreground/30">•</span>
-            <span className="shrink-0 truncate">{formatTime(file.metadata?.uploadedAt || 0)}</span>
+            <span className="shrink-0 truncate">
+              {formatTime(file.metadata?.uploadedAt || 0)}
+            </span>
             {tags.length > 0 && (
               <>
                 <span className="text-foreground/30">•</span>
@@ -96,7 +121,7 @@ export function FileCardList({ file, actions }: FileCardListProps) {
               handleResumeUpload();
             }}
             disabled={isResuming}
-            title="继续上传"
+            title={t("继续上传")}
             className="h-7 text-amber-300 border-amber-500/80 hover:bg-amber-500/50 shrink-0 px-2 rounded-lg text-xs"
           >
             {isResuming ? (

@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useEffect, useState } from "react";
 import {
@@ -64,6 +65,7 @@ export function MobileBatchDownloadDialog({
   open,
   onOpenChange,
 }: MobileBatchDownloadDialogProps) {
+  useLocale();
   const [queue, setQueue] = useState<QueueEntry[]>([]);
   const [activeIndex, setActiveIndex] = useState(-1);
 
@@ -96,7 +98,7 @@ export function MobileBatchDownloadDialog({
     try {
       if (shouldOpenLargeMedia(entry)) {
         updateStatus(index, "success");
-        toast.info("已打开文件链接，请使用浏览器保存");
+        toast.info(t("已打开文件链接，请使用浏览器保存"));
         window.open(getFileUrl(entry.key), "_blank", "noopener,noreferrer");
         return;
       }
@@ -108,7 +110,7 @@ export function MobileBatchDownloadDialog({
       updateStatus(index, status === "success" ? "success" : "failed");
     } catch {
       updateStatus(index, "failed");
-      toast.error(`下载失败: ${entry.metadata.fileName}`);
+      toast.error(t("下载失败: {0}", entry.metadata.fileName));
     } finally {
       setActiveIndex(-1);
     }
@@ -126,9 +128,9 @@ export function MobileBatchDownloadDialog({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[85vh] flex flex-col w-full">
         <DrawerHeader>
-          <DrawerTitle>批量下载</DrawerTitle>
+          <DrawerTitle>{t("批量下载")}</DrawerTitle>
           <DrawerDescription>
-            点击每个文件触发下载，已完成的文件会自动标记。
+            {t("点击每个文件触发下载，已完成的文件会自动标记。")}
           </DrawerDescription>
         </DrawerHeader>
 
@@ -189,7 +191,7 @@ export function MobileBatchDownloadDialog({
                       className="h-8 px-2 shrink-0"
                       onClick={() => handleAction(index, true)}
                     >
-                      重试
+                      {t("重试")}
                     </Button>
                   )}
                 </div>
@@ -200,7 +202,7 @@ export function MobileBatchDownloadDialog({
 
         <DrawerFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            关闭
+            {t("关闭")}
           </Button>
         </DrawerFooter>
       </DrawerContent>

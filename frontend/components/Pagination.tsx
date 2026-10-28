@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import ReactPaginate from "react-paginate";
 import {
@@ -46,6 +47,7 @@ export function Pagination({
   onItemsPerPageChange,
   className,
 }: Props) {
+  useLocale();
   const pageCount = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
   return (
@@ -83,7 +85,7 @@ export function Pagination({
           disabled={loading}
           variant="ghost"
           size="sm"
-          title={loading ? "加载中" : error ? "重试" : "加载更多"}
+          title={loading ? t("加载中") : error ? t("重试") : t("加载更多")}
           className="h-9 min-w-[36px] px-3 border-primary/30 text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
@@ -98,7 +100,7 @@ export function Pagination({
 
       <>
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-secondary/30 border border-glass-border">
-          <span className="text-xs text-foreground/50">每页</span>
+          <span className="text-xs text-foreground/50">{t("每页")}</span>
           <Select
             value={itemsPerPage.toString()}
             onValueChange={(value) => onItemsPerPageChange(Number(value))}
@@ -108,7 +110,11 @@ export function Pagination({
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               {ITEMS_PER_PAGE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={size.toString()} className="text-xs">
+                <SelectItem
+                  key={size}
+                  value={size.toString()}
+                  className="text-xs"
+                >
                   {size}
                 </SelectItem>
               ))}
@@ -117,9 +123,9 @@ export function Pagination({
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-foreground/50">
-          <span>共</span>
-          <span className="text-primary font-semibold">{totalItems}</span>
-          <span>个文件</span>
+          <span className="text-primary font-semibold">
+            {t("共 {0} 个文件", totalItems)}
+          </span>
         </div>
       </>
     </div>

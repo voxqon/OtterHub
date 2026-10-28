@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { Suspense, useState } from "react";
 import { login } from "@/lib/api";
@@ -18,12 +19,14 @@ import {
 import { Footer } from "@/components/footer";
 import { APP_NAME, APP_TAGLINE } from "@/lib/ui-text";
 import { getSafeRedirectPath } from "@/lib/utils/common";
+import { LanguageSelect } from "@/components/LanguageSelect";
 
 type LoginFormValues = {
   password: string;
 };
 
 function LoginContent() {
+  useLocale();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -40,9 +43,9 @@ function LoginContent() {
     try {
       const success = await login(values.password);
       if (!success) {
-        throw new Error("登录失败，请检查密码");
+        throw new Error(t("登录失败，请检查密码"));
       }
-      toast.success("登录成功");
+      toast.success(t("登录成功"));
       const redirectUrl = getSafeRedirectPath(
         searchParams.get("redirect"),
         window.location.origin
@@ -50,7 +53,7 @@ function LoginContent() {
       router.push(redirectUrl);
     } catch (err: any) {
       console.error("Login failed:", err);
-      toast.error(err.message || "登录失败，请检查密码");
+      toast.error(err.message || t("登录失败，请检查密码"));
     } finally {
       setLoading(false);
     }
@@ -77,7 +80,7 @@ function LoginContent() {
             <FormField
               control={form.control}
               name="password"
-              rules={{ required: "请输入密码" }}
+              rules={{ required: t("请输入密码") }}
               render={({ field }) => (
                 <FormItem className="space-y-0">
                   <FormControl>
@@ -85,7 +88,7 @@ function LoginContent() {
                       <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/40 group-focus-within:text-primary transition-colors" />
                       <Input
                         type="password"
-                        placeholder="请输入访问密码"
+                        placeholder={t("请输入访问密码")}
                         className="h-11 pl-10.5 bg-secondary/40 border-glass-border backdrop-blur-md text-foreground placeholder:text-foreground/40 focus-visible:ring-2 focus-visible:ring-primary/30 transition-all rounded-xl text-sm"
                         disabled={loading}
                         onKeyDown={(event) => {
@@ -115,17 +118,21 @@ function LoginContent() {
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "进入系统"
+                t("进入系统")
               )}
             </Button>
           </form>
         </Form>
+      </div>
+      <div className="mt-4">
+        <LanguageSelect />
       </div>
     </div>
   );
 }
 
 export default function LoginPage() {
+  useLocale();
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-between p-6 bg-linear-to-br from-gradient-from via-gradient-via to-gradient-to overflow-hidden">
       {/* Background decoration */}

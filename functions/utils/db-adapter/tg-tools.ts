@@ -474,6 +474,7 @@ export async function sendTelegramUploadNotice(
     fileName: string;
     fileSize: number;
     text?: string;
+    apiBaseUrl?: string;
   }
 ): Promise<{ ok: boolean; skipped?: boolean; data?: any; error?: string }> {
   const text = payload.text || buildTelegramUploadNoticeText(payload);
@@ -484,18 +485,26 @@ export async function sendTelegramUploadNotice(
   };
 
   try {
-    let result = await postTelegramMessage(botToken, {
-      ...basePayload,
-      ...(payload.replyToMessageId
-        ? {
-            reply_to_message_id: payload.replyToMessageId,
-            allow_sending_without_reply: true,
-          }
-        : {}),
-    });
+    let result = await postTelegramMessage(
+      botToken,
+      {
+        ...basePayload,
+        ...(payload.replyToMessageId
+          ? {
+              reply_to_message_id: payload.replyToMessageId,
+              allow_sending_without_reply: true,
+            }
+          : {}),
+      },
+      payload.apiBaseUrl
+    );
 
     if (!result.ok && payload.replyToMessageId) {
-      result = await postTelegramMessage(botToken, basePayload);
+      result = await postTelegramMessage(
+        botToken,
+        basePayload,
+        payload.apiBaseUrl
+      );
     }
 
     return result;
@@ -580,17 +589,21 @@ function buildTelegramUploadNoticeText(payload: {
  */
 async function postTelegramMessage(
   botToken: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  apiBaseUrl?: string
 ): Promise<{ ok: boolean; data: any }> {
-  const response = await fetch(buildTgApiUrl(botToken, "sendMessage"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-      ...payload,
-    }),
-  });
+  const response = await fetch(
+    buildTgApiUrl(botToken, "sendMessage", apiBaseUrl),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+        ...payload,
+      }),
+    }
+  );
   const data = await response.json().catch(() => ({}));
   return { ok: response.ok && data?.ok, data };
 }

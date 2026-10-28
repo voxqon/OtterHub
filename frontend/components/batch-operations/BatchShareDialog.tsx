@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useState, useEffect } from "react";
 import { FileItem } from "@shared/types";
@@ -39,6 +40,7 @@ export function BatchShareDialog({
   open,
   onOpenChange,
 }: BatchShareDialogProps) {
+  useLocale();
   const isSingleFile = files.length === 1;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shareLink, setShareLink] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export function BatchShareDialog({
       if (expireIn === "custom") {
         const days = parseInt(customDays);
         if (isNaN(days) || days < 1 || days > 365) {
-          toast.error("请输入有效的天数 (1-365)");
+          toast.error(t("请输入有效的天数 (1-365)"));
           setIsSubmitting(false);
           return;
         }
@@ -88,11 +90,11 @@ export function BatchShareDialog({
       setShareLink(url);
       toast.success(
         isSingleFile
-          ? "成功创建分享链接"
-          : `成功创建打包分享链接（${files.length} 个文件）`
+          ? t("成功创建分享链接")
+          : t("成功创建打包分享链接（{0} 个文件）", files.length)
       );
     } catch (error) {
-      toast.error("创建分享链接失败");
+      toast.error(t("创建分享链接失败"));
       console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -102,7 +104,7 @@ export function BatchShareDialog({
   const handleCopy = () => {
     if (shareLink) {
       navigator.clipboard.writeText(shareLink);
-      toast.success("链接已复制到剪贴板");
+      toast.success(t("链接已复制到剪贴板"));
     }
   };
 
@@ -126,12 +128,12 @@ export function BatchShareDialog({
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center gap-2">
             <Share2 className="h-5 w-5 text-primary" />
-            {isSingleFile ? "分享文件" : "打包分享"}
+            {isSingleFile ? t("分享文件") : t("打包分享")}
           </DialogTitle>
           <DialogDescription>
             {isSingleFile
-              ? "为选中的文件创建分享链接"
-              : "将选中的文件打包为一个分享链接"}
+              ? t("为选中的文件创建分享链接")
+              : t("将选中的文件打包为一个分享链接")}
           </DialogDescription>
         </DialogHeader>
 
@@ -149,13 +151,7 @@ export function BatchShareDialog({
                     {files[0]?.metadata?.fileName || files[0]?.name}
                   </span>
                 ) : (
-                  <>
-                    已选中{" "}
-                    <span className="font-bold text-primary">
-                      {files.length}
-                    </span>{" "}
-                    个文件
-                  </>
+                  <span>{t("已选中 {0} 个文件", files.length)}</span>
                 )}
               </p>
             </div>
@@ -163,13 +159,13 @@ export function BatchShareDialog({
             {/* 分享名称（仅多文件时显示） */}
             {!isSingleFile && (
               <div className="grid gap-2">
-                <Label htmlFor="bundle-name">分享名称（可选）</Label>
+                <Label htmlFor="bundle-name">{t("分享名称（可选）")}</Label>
                 <Input
                   id="bundle-name"
                   type="text"
                   value={bundleName}
                   onChange={(e) => setBundleName(e.target.value)}
-                  placeholder={`默认：share-xxx`}
+                  placeholder={t("默认：share-xxx")}
                   disabled={isSubmitting}
                   className="bg-secondary/30 border-glass-border text-foreground"
                 />
@@ -178,7 +174,7 @@ export function BatchShareDialog({
 
             {/* 过期时间选择 */}
             <div className="grid gap-2">
-              <Label htmlFor="expire">过期时间</Label>
+              <Label htmlFor="expire">{t("过期时间")}</Label>
               <Select
                 value={expireIn}
                 onValueChange={setExpireIn}
@@ -188,14 +184,14 @@ export function BatchShareDialog({
                   id="expire"
                   className="bg-secondary/30 border-glass-border text-foreground"
                 >
-                  <SelectValue placeholder="选择过期时间" />
+                  <SelectValue placeholder={t("选择过期时间")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="3600">1 小时</SelectItem>
-                  <SelectItem value="86400">1 天</SelectItem>
-                  <SelectItem value="604800">7 天</SelectItem>
-                  <SelectItem value="2592000">30 天</SelectItem>
-                  <SelectItem value="custom">自定义（天数）</SelectItem>
+                  <SelectItem value="3600">{t("1 小时")}</SelectItem>
+                  <SelectItem value="86400">{t("1 天")}</SelectItem>
+                  <SelectItem value="604800">{t("7 天")}</SelectItem>
+                  <SelectItem value="2592000">{t("30 天")}</SelectItem>
+                  <SelectItem value="custom">{t("自定义（天数）")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -203,7 +199,7 @@ export function BatchShareDialog({
             {/* 自定义天数 */}
             {expireIn === "custom" && (
               <div className="grid gap-2">
-                <Label htmlFor="custom-days">天数（最大 365）</Label>
+                <Label htmlFor="custom-days">{t("天数（最大 365）")}</Label>
                 <Input
                   id="custom-days"
                   type="number"
@@ -223,7 +219,7 @@ export function BatchShareDialog({
                       else setCustomDays(val);
                     }
                   }}
-                  placeholder="输入天数"
+                  placeholder={t("输入天数")}
                   disabled={isSubmitting}
                   className="bg-secondary/30 border-glass-border text-foreground"
                 />
@@ -234,7 +230,7 @@ export function BatchShareDialog({
           <div className="flex items-center space-x-2 py-4">
             <div className="grid flex-1 gap-2">
               <Label htmlFor="link" className="sr-only">
-                链接
+                {t("链接")}
               </Label>
               <Input
                 id="link"
@@ -244,7 +240,7 @@ export function BatchShareDialog({
               />
             </div>
             <Button size="sm" className="px-3" onClick={handleCopy}>
-              <span className="sr-only">复制</span>
+              <span className="sr-only">{t("复制")}</span>
               <Copy className="h-4 w-4" />
             </Button>
           </div>
@@ -259,7 +255,7 @@ export function BatchShareDialog({
                 disabled={isSubmitting}
                 className="border-glass-border text-foreground hover:bg-secondary/50"
               >
-                取消
+                {t("取消")}
               </Button>
               <Button
                 onClick={handleCreateLink}
@@ -269,7 +265,7 @@ export function BatchShareDialog({
                 {isSubmitting && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                创建分享链接
+                {t("创建分享链接")}
               </Button>
             </div>
           ) : (
@@ -279,13 +275,13 @@ export function BatchShareDialog({
                 onClick={handleReset}
                 className="border-glass-border text-foreground hover:bg-secondary/50"
               >
-                再次创建
+                {t("再次创建")}
               </Button>
               <Button
                 onClick={() => handleClose(false)}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
-                完成
+                {t("完成")}
               </Button>
             </div>
           )}

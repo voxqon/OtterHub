@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useEffect, useRef } from "react";
 import {
@@ -9,7 +10,13 @@ import {
 } from "@/components/ui/dialog";
 import { WallpaperTab } from "./wallpaper-tab/WallpaperTab";
 import { GeneralTab } from "./general-tab/GeneralTab";
-import { LayoutGrid, Image as ImageIcon, Settings, Share2, KeyRound } from "lucide-react";
+import {
+  LayoutGrid,
+  Image as ImageIcon,
+  Settings,
+  Share2,
+  KeyRound,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShareTab } from "./share-tab/ShareTab";
 import { useUIStore } from "@/stores/ui-store";
@@ -24,31 +31,32 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+  useLocale();
   const settingsSnapshotRef = useRef<SettingsSnapshot | null>(null);
   const previousOpenRef = useRef(open);
 
   const menuItems = [
     {
       id: SettingTab.General,
-      label: "常规设置",
+      label: t("常规设置"),
       icon: Settings,
       color: "text-slate-500",
     },
     {
       id: SettingTab.Wallpaper,
-      label: "随机壁纸",
+      label: t("随机壁纸"),
       icon: ImageIcon,
       color: "text-sky-500",
     },
     {
       id: SettingTab.Share,
-      label: "分享管理",
+      label: t("分享管理"),
       icon: Share2,
       color: "text-emerald-500",
     },
     {
       id: SettingTab.PublicApi,
-      label: "公共接口",
+      label: t("公共接口"),
       icon: KeyRound,
       color: "text-amber-600",
     },
@@ -94,7 +102,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-[95vw] sm:max-w-[95vw] md:max-w-[90vw] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-background/95 backdrop-blur-2xl border-border shadow-2xl rounded-2xl">
+      <DialogContent
+        aria-describedby={undefined}
+        className="w-full max-w-[95vw] sm:max-w-[95vw] md:max-w-[90vw] h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-background/95 backdrop-blur-2xl border-border shadow-2xl rounded-2xl"
+      >
         <DialogHeader className="px-6 py-4 border-b border-border/40 bg-muted/20">
           <div className="flex items-center gap-4">
             <div className="p-2 rounded-xl bg-primary/10 shadow-inner">
@@ -102,7 +113,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </div>
             <div>
               <DialogTitle className="text-lg font-bold tracking-tight">
-                系统设置
+                {t("系统设置")}
               </DialogTitle>
             </div>
           </div>
@@ -162,7 +173,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                       <LayoutGrid className="h-16 w-16" />
                     </div>
                     <p className="text-sm font-bold uppercase tracking-widest">
-                      功能开发中
+                      {t("功能开发中")}
                     </p>
                   </div>
                 )}

@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useEffect, useRef } from "react";
 import { usePreviewStore } from "@/stores/preview-store";
@@ -9,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { DraggablePreviewBookmark } from "./DraggablePreviewBookmark";
 
 export function GlobalVideoPlayer() {
+  useLocale();
   const { audio, video, text, minimize, maximize, close } = usePreviewStore();
   const activeFile = video?.file;
   const viewState = video?.viewState;
@@ -61,7 +63,7 @@ export function GlobalVideoPlayer() {
                 size="icon"
                 className="text-white hover:bg-white/20"
                 onClick={() => minimize("video")}
-                title="最小化"
+                title={t("最小化")}
               >
                 <Minus className="h-5 w-5" />
               </Button>
@@ -70,7 +72,7 @@ export function GlobalVideoPlayer() {
                 size="icon"
                 className="text-white hover:bg-white/20"
                 onClick={() => close("video")}
-                title="关闭"
+                title={t("关闭")}
               >
                 <X className="h-5 w-5" />
               </Button>

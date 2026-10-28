@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -42,31 +43,39 @@ import { SafeModeToggle } from "@/components/SafeModeToggle";
 import { ImageLoadModeToggle } from "@/components/ImageLoadModeToggle";
 import { ImageLoadMode } from "@shared/types";
 import { telegramWebhookApi } from "@/lib/api/telegram";
+import { LanguageSelect } from "@/components/LanguageSelect";
 
-const SettingCard = ({ icon: Icon, iconColor, title, desc, children }: any) => (
-  <Card className="border border-border/40 shadow-sm bg-muted/10 backdrop-blur-sm rounded-2xl overflow-hidden">
-    <CardHeader>
-      <div className="flex items-center gap-2">
-        <Icon className={`h-4 w-4 ${iconColor}`} />
-        <CardTitle className="text-base">{title}</CardTitle>
+const SettingCard = ({ icon: Icon, iconColor, title, desc, children }: any) => {
+  useLocale();
+  return (
+    <Card className="border border-border/40 shadow-sm bg-muted/10 backdrop-blur-sm rounded-2xl overflow-hidden">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Icon className={`h-4 w-4 ${iconColor}`} />
+          <CardTitle className="text-base">{title}</CardTitle>
+        </div>
+        {desc && <CardDescription>{desc}</CardDescription>}
+      </CardHeader>
+      <CardContent className="grid gap-4">{children}</CardContent>
+    </Card>
+  );
+};
+
+const SettingItem = ({ title, desc, children }: any) => {
+  useLocale();
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <Label className="text-sm font-medium">{title}</Label>
+        {desc && <p className="text-[11px] text-muted-foreground">{desc}</p>}
       </div>
-      {desc && <CardDescription>{desc}</CardDescription>}
-    </CardHeader>
-    <CardContent className="grid gap-4">{children}</CardContent>
-  </Card>
-);
-
-const SettingItem = ({ title, desc, children }: any) => (
-  <div className="flex items-center justify-between">
-    <div className="space-y-0.5">
-      <Label className="text-sm font-medium">{title}</Label>
-      {desc && <p className="text-[11px] text-muted-foreground">{desc}</p>}
+      {children}
     </div>
-    {children}
-  </div>
-);
+  );
+};
 
 const HintBox = ({ icon: Icon = Info, variant = "default", children }: any) => {
+  useLocale();
   const styles = {
     default: "bg-muted/30 border-border/20 text-muted-foreground",
     warning:
@@ -94,6 +103,7 @@ interface GeneralTabProps {
 export function GeneralTab({
   onGeneralSettingsSnapshotReset,
 }: GeneralTabProps) {
+  useLocale();
   const store = useGeneralSettingsStoreClient();
   const telegramWebhookInfo = store?.telegramWebhookInfo ?? null;
   const setTelegramWebhookInfo = store?.setTelegramWebhookInfo;
@@ -193,12 +203,12 @@ export function GeneralTab({
       const result = await pickDownloadDirectoryForFirstTime();
       if (result) {
         setCurrentDir(result.dirName);
-        toast.success(`已切换到: ${result.dirName}`);
+        toast.success(t("已切换到: {0}", result.dirName));
       }
     },
     setIsDirLoading,
     undefined,
-    "更换失败"
+    t("更换失败")
   );
 
   const handleClearDirectory = withLoading(
@@ -207,8 +217,8 @@ export function GeneralTab({
       setCurrentDir(null);
     },
     setIsDirLoading,
-    "已清除，下次下载需重新选择目录",
-    "清除失败"
+    t("已清除，下次下载需重新选择目录"),
+    t("清除失败")
   );
 
   // 手动同步到云端，成功后更新快照避免退出时重复触发
@@ -220,8 +230,8 @@ export function GeneralTab({
       onGeneralSettingsSnapshotReset?.();
     },
     setIsUploading,
-    "保存成功",
-    "保存失败"
+    t("保存成功"),
+    t("保存失败")
   );
 
   // 从云端恢复，成功后更新快照
@@ -233,8 +243,8 @@ export function GeneralTab({
       onGeneralSettingsSnapshotReset?.();
     },
     setIsSyncing,
-    "恢复成功",
-    "恢复失败"
+    t("恢复成功"),
+    t("恢复失败")
   );
 
   /**
@@ -245,14 +255,14 @@ export function GeneralTab({
       const info = await telegramWebhookApi.getInfo();
       setTelegramWebhookInfo?.(info);
       if (info.configured) {
-        toast.success("Telegram Webhook 已绑定");
+        toast.success(t("Telegram Webhook 已绑定"));
       } else {
-        toast.warning("Telegram Webhook 尚未绑定");
+        toast.warning(t("Telegram Webhook 尚未绑定"));
       }
     },
     setIsCheckingTelegramWebhook,
     undefined,
-    "检查失败"
+    t("检查失败")
   );
 
   /**
@@ -265,18 +275,18 @@ export function GeneralTab({
         configured: true,
         url: result.webhookUrl,
       });
-      toast.success("Telegram Webhook 已配置");
+      toast.success(t("Telegram Webhook 已配置"));
     },
     setIsSettingTelegramWebhook,
     undefined,
-    "配置失败"
+    t("配置失败")
   );
 
   // SSR 安全处理 - 放在所有 hooks 之后
   if (!store) {
     return (
       <div className="flex flex-col h-full items-center justify-center text-muted-foreground">
-        <div className="animate-pulse">加载设置中...</div>
+        <div className="animate-pulse">{t("加载设置中...")}</div>
       </div>
     );
   }
@@ -284,11 +294,11 @@ export function GeneralTab({
   return (
     <div className="flex flex-col h-full overflow-y-auto custom-scrollbar space-y-6 pr-2">
       {/* 头部区域 */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
-          <h2 className="text-xl font-bold tracking-tight">常规设置</h2>
+          <h2 className="text-xl font-bold tracking-tight">{t("常规设置")}</h2>
           <p className="text-sm text-muted-foreground">
-            更改自动保存，可手动同步到云端
+            {t("更改自动保存，可手动同步到云端")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -302,7 +312,7 @@ export function GeneralTab({
             <CloudSync
               className={cn("h-4 w-4 mr-2", isSyncing && "animate-spin")}
             />
-            从云端恢复
+            {t("从云端恢复")}
           </Button>
           <Button
             size="sm"
@@ -313,7 +323,7 @@ export function GeneralTab({
             <CloudUpload
               className={cn("h-4 w-4 mr-2", isUploading && "animate-spin")}
             />
-            保存到云端
+            {t("保存到云端")}
           </Button>
         </div>
       </div>
@@ -322,22 +332,28 @@ export function GeneralTab({
 
       <div className="grid gap-6">
         {/* 1. 浏览设置 */}
-        <SettingCard icon={Eye} iconColor="text-blue-500" title="浏览设置">
+        <SettingCard icon={Eye} iconColor="text-blue-500" title={t("浏览设置")}>
           <div className="flex flex-col space-y-4">
+            <SettingItem title={t("界面语言")}>
+              <LanguageSelect />
+            </SettingItem>
             {/* 安全模式 */}
-            <SettingItem title="安全模式" desc="NSFW 敏感内容显示遮罩">
+            <SettingItem
+              title={t("安全模式")}
+              desc={t("NSFW 敏感内容显示遮罩")}
+            >
               <SafeModeToggle />
             </SettingItem>
 
             {/* 图片加载模式 */}
-            <SettingItem title="图片加载模式">
+            <SettingItem title={t("图片加载模式")}>
               <ImageLoadModeToggle />
             </SettingItem>
 
             {/* 省流阈值 - 仅在省流模式显示 */}
             {store.imageLoadMode === ImageLoadMode.DataSaver && (
               <>
-                <SettingItem title="省流模式阈值">
+                <SettingItem title={t("省流模式阈值")}>
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
@@ -350,7 +366,9 @@ export function GeneralTab({
                     MB
                   </div>
                 </SettingItem>
-                <HintBox>省流模式下，超过此大小的图片不加载预览。</HintBox>
+                <HintBox>
+                  {t("省流模式下，超过此大小的图片不加载预览。")}
+                </HintBox>
               </>
             )}
           </div>
@@ -360,10 +378,13 @@ export function GeneralTab({
         <SettingCard
           icon={ShieldCheck}
           iconColor="text-emerald-500"
-          title="上传设置"
+          title={t("上传设置")}
         >
           <div className="flex flex-col space-y-4">
-            <SettingItem title="NSFW 内容检测" desc="上传前本地检测敏感内容">
+            <SettingItem
+              title={t("NSFW 内容检测")}
+              desc={t("上传前本地检测敏感内容")}
+            >
               <Switch
                 checked={store.nsfwDetection}
                 onCheckedChange={store.setNsfwDetection}
@@ -371,11 +392,14 @@ export function GeneralTab({
             </SettingItem>
             {!store.nsfwDetection && (
               <HintBox icon={ShieldAlert} variant="warning">
-                关闭后上传更快，但敏感内容不会自动标记 NSFW。
+                {t("关闭后上传更快，但敏感内容不会自动标记 NSFW。")}
               </HintBox>
             )}
 
-            <SettingItem title="AI 智能分析" desc="上传后智能识别生成描述">
+            <SettingItem
+              title={t("AI 智能分析")}
+              desc={t("上传后智能识别生成描述")}
+            >
               <Switch
                 checked={store.enableImageAnalysis}
                 onCheckedChange={store.setEnableImageAnalysis}
@@ -383,29 +407,34 @@ export function GeneralTab({
             </SettingItem>
             {!store.enableImageAnalysis && (
               <HintBox icon={Sparkles} variant="info">
-                关闭后跳过 AI 分析，可节省一次 KV 写操作
+                {t("关闭后跳过 AI 分析，可节省一次 KV 写操作")}
               </HintBox>
             )}
 
-            <SettingItem title="默认上传标签" desc="上传时自动添加的标签">
+            <SettingItem
+              title={t("默认上传标签")}
+              desc={t("上传时自动添加的标签")}
+            >
               <TagSelector
                 tags={store.defaultUploadTags}
                 onChange={store.setDefaultUploadTags}
-                placeholder="选择默认标签..."
+                placeholder={t("选择默认标签...")}
               />
             </SettingItem>
 
             <div className="rounded-lg border border-border/20 bg-background/50 p-4">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <Webhook className="h-5 w-5 text-sky-500 shrink-0" />
                   <div className="min-w-0">
-                    <p className="font-medium text-sm">Telegram 频道上传</p>
+                    <p className="font-medium text-sm">
+                      {t("Telegram 频道上传")}
+                    </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {telegramWebhookInfo?.url ||
                         (telegramWebhookInfo?.reason === "missing-token"
-                          ? "缺少 TG_BOT_TOKEN"
-                          : "未检查")}
+                          ? t("缺少 TG_BOT_TOKEN")
+                          : t("未检查"))}
                     </p>
                   </div>
                 </div>
@@ -425,7 +454,7 @@ export function GeneralTab({
                         isCheckingTelegramWebhook && "animate-spin"
                       )}
                     />
-                    检查状态
+                    {t("检查状态")}
                   </Button>
                   <Button
                     size="sm"
@@ -441,7 +470,7 @@ export function GeneralTab({
                         isSettingTelegramWebhook && "animate-pulse"
                       )}
                     />
-                    配置 Webhook
+                    {t("配置 Webhook")}
                   </Button>
                 </div>
               </div>
@@ -459,15 +488,17 @@ export function GeneralTab({
           <SettingCard
             icon={Download}
             iconColor="text-orange-500"
-            title="下载管理"
+            title={t("下载管理")}
           >
-            <div className="flex items-center justify-between p-4 rounded-lg bg-background/50 border border-border/20">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-lg bg-background/50 border border-border/20">
               <div className="flex items-center gap-3">
                 <FolderOpen className="h-5 w-5 text-blue-500" />
                 <div>
-                  <p className="font-medium text-sm">大文件/批量下载目录</p>
+                  <p className="font-medium text-sm">
+                    {t("大文件/批量下载目录")}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {currentDir || "未设置"}
+                    {currentDir || t("未设置")}
                   </p>
                 </div>
               </div>
@@ -485,7 +516,7 @@ export function GeneralTab({
                       isDirLoading && "animate-spin"
                     )}
                   />
-                  更换目录
+                  {t("更换目录")}
                 </Button>
                 {currentDir && (
                   <Button
@@ -493,7 +524,7 @@ export function GeneralTab({
                     size="sm"
                     onClick={handleClearDirectory}
                     className="h-9"
-                    title="清除目录"
+                    title={t("清除目录")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -501,18 +532,21 @@ export function GeneralTab({
               </div>
             </div>
             <HintBox>
-              首次保存大文件或批量下载需选择目录。建议提前创建 OtterHub
-              文件夹。目录授权失效时会重新提示。
+              {t(
+                "首次保存大文件或批量下载需选择目录。建议提前创建 OtterHub 文件夹。目录授权失效时会重新提示。"
+              )}
             </HintBox>
           </SettingCard>
         ) : (
           <Alert className="border-yellow-500/50 bg-yellow-500/10">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
             <AlertTitle className="text-yellow-800">
-              自定义下载目录不可用
+              {t("自定义下载目录不可用")}
             </AlertTitle>
             <AlertDescription className="text-yellow-700">
-              当前浏览器将使用默认下载方式。移动端批量下载需逐个打开/保存文件。
+              {t(
+                "当前浏览器将使用默认下载方式。移动端批量下载需逐个打开/保存文件。"
+              )}
             </AlertDescription>
           </Alert>
         )}

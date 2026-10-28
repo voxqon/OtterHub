@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useState, useEffect } from "react";
 import { FileItem } from "@shared/types";
@@ -37,20 +38,38 @@ const MODE_LABELS: Record<
   BatchRenameMode,
   { label: string; description: string; example: string }
 > = {
-  none: { label: "选择模式", description: "", example: "" },
+  none: {
+    get label() {
+      return t("选择模式");
+    },
+    description: "",
+    example: "",
+  },
   prefix: {
-    label: "添加前缀",
-    description: "在文件名前面添加内容",
+    get label() {
+      return t("添加前缀");
+    },
+    get description() {
+      return t("在文件名前面添加内容");
+    },
     example: "photo.jpg → 2024_photo.jpg",
   },
   suffix: {
-    label: "添加后缀",
-    description: "在文件名后面、扩展名前面添加内容",
+    get label() {
+      return t("添加后缀");
+    },
+    get description() {
+      return t("在文件名后面、扩展名前面添加内容");
+    },
     example: "video.mp4 → video_backup.mp4",
   },
   basename: {
-    label: "统一名称",
-    description: "将所有文件改为同一名称（保留原扩展名）",
+    get label() {
+      return t("统一名称");
+    },
+    get description() {
+      return t("将所有文件改为同一名称（保留原扩展名）");
+    },
     example: "xxx.jpg / yyy.png → travel.jpg / travel.png",
   },
 };
@@ -61,6 +80,7 @@ export function BatchRenameDialog({
   onOpenChange,
   onSuccess,
 }: BatchRenameDialogProps) {
+  useLocale();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
@@ -84,7 +104,7 @@ export function BatchRenameDialog({
 
     // 如果没有任何变化，直接退出
     if (!hasRenameChange(files, payload)) {
-      toast.info("文件名未发生变化");
+      toast.info(t("文件名未发生变化"));
       onOpenChange(false);
       return;
     }
@@ -108,17 +128,17 @@ export function BatchRenameDialog({
           });
         },
         (current, total) => setProgress({ current, total }),
-        10,
+        10
       );
 
-      toast.success(`成功重命名 ${files.length} 个文件`);
+      toast.success(t("成功重命名 {0} 个文件", files.length));
 
       onOpenChange(false);
       onSuccess?.(updatedFiles);
     } catch (error) {
       console.error("Error renaming files:", error);
-      toast.error(`重命名 ${files.length} 个文件失败`, {
-        description: error instanceof Error ? error.message : "未知错误",
+      toast.error(t("重命名 {0} 个文件失败", files.length), {
+        description: error instanceof Error ? error.message : t("未知错误"),
       });
     } finally {
       setIsSubmitting(false);
@@ -137,27 +157,28 @@ export function BatchRenameDialog({
         <DialogHeader className="p-6 pb-2 shrink-0">
           <DialogTitle className="text-foreground flex items-center gap-2">
             <FilePen className="h-5 w-5 text-primary" />
-            批量重命名
+            {t("批量重命名")}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col flex-1 overflow-hidden"
+        >
           <div className="flex-1 overflow-y-auto px-6 py-2 space-y-6 scrollbar-thin scrollbar-thumb-glass-border">
             {/* 选中的文件数量 */}
             <div className="p-3 rounded-lg bg-secondary/30 border border-glass-border">
               <p className="text-sm text-foreground/60 flex items-center gap-2">
                 <Info className="h-4 w-4 text-primary" />
-                已选中{" "}
-                <span className="font-bold text-primary">
-                  {files.length}
-                </span>{" "}
-                个文件
+                <span>{t("已选中 {0} 个文件", files.length)}</span>
               </p>
             </div>
 
             {/* 模式选择 */}
             <div className="space-y-3">
-              <Label className="text-foreground/60 text-sm">重命名模式</Label>
+              <Label className="text-foreground/60 text-sm">
+                {t("重命名模式")}
+              </Label>
               <RadioGroup
                 value={mode}
                 onValueChange={(v) => setMode(v as BatchRenameMode)}
@@ -175,12 +196,16 @@ export function BatchRenameDialog({
                         htmlFor={m}
                         className={cn(
                           "flex items-start gap-3 p-3 rounded-lg border transition-all cursor-pointer",
-                          isSelected 
-                            ? "border-primary bg-primary/5 shadow-xs" 
+                          isSelected
+                            ? "border-primary bg-primary/5 shadow-xs"
                             : "border-glass-border hover:bg-secondary/50"
                         )}
                       >
-                        <RadioGroupItem value={m} id={m} className="mt-1 shrink-0" />
+                        <RadioGroupItem
+                          value={m}
+                          id={m}
+                          className="mt-1 shrink-0"
+                        />
                         <div className="flex-1 space-y-1">
                           <div className="font-medium text-foreground">
                             {config.label}
@@ -188,9 +213,9 @@ export function BatchRenameDialog({
                           <p className="text-xs text-foreground/60 leading-relaxed">
                             {config.description}
                           </p>
-                            <code className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono">
-                              {config.example}
-                            </code>
+                          <code className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono">
+                            {config.example}
+                          </code>
                         </div>
                       </Label>
                     );
@@ -205,7 +230,11 @@ export function BatchRenameDialog({
                   htmlFor="rename-value"
                   className="text-foreground/60 text-sm"
                 >
-                  {MODE_LABELS[mode].label}内容
+                  {mode === "prefix"
+                    ? t("前缀")
+                    : mode === "suffix"
+                      ? t("后缀")
+                      : t("文件名")}
                 </Label>
                 <Input
                   id="rename-value"
@@ -213,8 +242,8 @@ export function BatchRenameDialog({
                   onChange={(e) => setValue(e.target.value)}
                   placeholder={
                     mode === "basename"
-                      ? "输入新文件名（不含扩展名）"
-                      : "输入要添加的内容"
+                      ? t("输入新文件名（不含扩展名）")
+                      : t("输入要添加的内容")
                   }
                   disabled={isSubmitting}
                   className="bg-secondary/30 border-glass-border text-foreground placeholder:text-foreground/60 focus-visible:ring-primary"
@@ -227,7 +256,7 @@ export function BatchRenameDialog({
             {mode !== "none" && value && previews.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-foreground/60 text-sm">
-                  预览（前5个）
+                  {t("预览（前5个）")}
                 </Label>
                 <div className="p-3 rounded-lg bg-secondary/30 border border-glass-border space-y-2">
                   {previews.map((preview, index) => (
@@ -256,7 +285,7 @@ export function BatchRenameDialog({
                   ))}
                   {files.length > 5 && (
                     <p className="text-xs text-foreground/60 text-center pt-1">
-                      ...还有 {files.length - 5} 个文件
+                      {t("...还有 {0} 个文件", files.length - 5)}
                     </p>
                   )}
                 </div>
@@ -272,7 +301,7 @@ export function BatchRenameDialog({
               disabled={isSubmitting}
               className="border-glass-border text-foreground hover:bg-secondary/50"
             >
-              取消
+              {t("取消")}
             </Button>
             <Button
               type="submit"
@@ -283,11 +312,11 @@ export function BatchRenameDialog({
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   {progress.total > 0
-                    ? `重命名中 ${progress.current}/${progress.total}`
-                    : "重命名中..."}
+                    ? t("重命名中 {0}/{1}", progress.current, progress.total)
+                    : t("重命名中...")}
                 </>
               ) : (
-                "确认重命名"
+                t("确认重命名")
               )}
             </Button>
           </DialogFooter>
@@ -296,4 +325,3 @@ export function BatchRenameDialog({
     </Dialog>
   );
 }
-

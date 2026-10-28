@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useState, useMemo } from "react";
 import { RefreshCcw, Trash2, Loader2 } from "lucide-react";
@@ -17,6 +18,7 @@ interface TrashFileCardProps {
 }
 
 export function TrashFileCard({ file }: TrashFileCardProps) {
+  useLocale();
   const { restoreFromTrashLocal, deleteFilesLocalByType } = useFileDataStore();
 
   const { toggleSelection, selectedKeys } = useFileUIStore();
@@ -32,18 +34,18 @@ export function TrashFileCard({ file }: TrashFileCardProps) {
   }, [file.name]);
   const isSelected = selectedKeys[FileType.Trash]?.includes(file.name);
 
-  const remainingText = useMemo(() => {
+  const remainingText = (() => {
     const exp = file.expiration;
     if (!exp) return "N/A";
     const ms = exp * 1000 - Date.now();
-    if (ms <= 0) return "Expired";
+    if (ms <= 0) return t("已过期");
 
     const dayMs = 24 * 60 * 60 * 1000;
     const hourMs = 60 * 60 * 1000;
     const days = Math.floor(ms / dayMs);
     const hours = Math.floor((ms % dayMs) / hourMs);
-    return `剩余 ${days}天${hours}小时`;
-  }, [file.expiration]);
+    return t("剩余 {0}天{1}小时", days, hours);
+  })();
 
   const handleRestore = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -53,9 +55,9 @@ export function TrashFileCard({ file }: TrashFileCardProps) {
       await restoreFile(file.name).then(() => {
         restoreFromTrashLocal(file);
       });
-      toast.success("恢复成功");
+      toast.success(t("恢复成功"));
     } catch (_error) {
-      toast.error("恢复失败");
+      toast.error(t("恢复失败"));
     } finally {
       setIsRestoring(false);
     }
@@ -63,7 +65,11 @@ export function TrashFileCard({ file }: TrashFileCardProps) {
 
   const handleDeletePermanently = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`确定永久删除 ${file.metadata?.fileName} ? 此操作不可恢复！`))
+    if (
+      !confirm(
+        t("确定永久删除 {0} ? 此操作不可恢复！", file.metadata?.fileName)
+      )
+    )
       return;
 
     setIsDeleting(true);
@@ -71,9 +77,11 @@ export function TrashFileCard({ file }: TrashFileCardProps) {
       await deleteFile(file.name).then(() => {
         deleteFilesLocalByType([file.name], FileType.Trash);
       });
-      toast.success("删除成功");
-    } catch (_error) {
-      toast.error("删除失败");
+      toast.success(t("删除成功"));
+    } catch (error) {
+      toast.error(t("删除失败"), {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -133,7 +141,7 @@ export function TrashFileCard({ file }: TrashFileCardProps) {
           className={`h-8 w-8 text-green-500 hover:bg-green-500/50`}
           onClick={handleRestore}
           disabled={isRestoring || isDeleting}
-          title="还原"
+          title={t("还原")}
         >
           {isRestoring ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -147,7 +155,7 @@ export function TrashFileCard({ file }: TrashFileCardProps) {
           className={`h-8 w-8 text-red-500 hover:bg-red-500/50`}
           onClick={handleDeletePermanently}
           disabled={isRestoring || isDeleting}
-          title="永久删除"
+          title={t("永久删除")}
         >
           {isDeleting ? (
             <Loader2 className="h-4 w-4 animate-spin" />

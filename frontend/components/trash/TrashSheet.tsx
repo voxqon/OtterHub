@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useEffect, useState } from "react";
 import { Trash2, Loader2, RefreshCcw } from "lucide-react";
@@ -23,6 +24,7 @@ interface TrashSheetProps {
 }
 
 export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
+  useLocale();
   const {
     buckets,
     fetchBucket,
@@ -55,11 +57,12 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
   };
 
   const handleBatchRestore = async () => {
-    if (!confirm(`确定还原选中的 ${selectedTrashKeys.length} 个文件?`)) return;
+    if (!confirm(t("确定还原选中的 {0} 个文件?", selectedTrashKeys.length)))
+      return;
 
     setIsBatchProcessing(true);
     const toastId = toast.loading(
-      `正在还原 ${selectedTrashKeys.length} 个文件...`
+      t("正在还原 {0} 个文件...", selectedTrashKeys.length)
     );
 
     try {
@@ -74,7 +77,7 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
           restoreFromTrashLocal(item);
         },
         (current, total) => {
-          toast.loading(`正在还原 ${current}/${total} 个文件...`, {
+          toast.loading(t("正在还原 {0}/{1} 个文件...", current, total), {
             id: toastId,
           });
         },
@@ -83,11 +86,11 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
 
       clearSelection(FileType.Trash);
 
-      toast.success(`已还原 ${selectedTrashKeys.length} 个文件`, {
+      toast.success(t("已还原 {0} 个文件", selectedTrashKeys.length), {
         id: toastId,
       });
     } catch (_error) {
-      toast.error("批量还原失败", { id: toastId });
+      toast.error(t("批量还原失败"), { id: toastId });
     } finally {
       setIsBatchProcessing(false);
     }
@@ -96,14 +99,17 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
   const handleBatchDelete = async () => {
     if (
       !confirm(
-        `确定永久删除选中的 ${selectedTrashKeys.length} 个文件? 此操作不可恢复！`
+        t(
+          "确定永久删除选中的 {0} 个文件? 此操作不可恢复！",
+          selectedTrashKeys.length
+        )
       )
     )
       return;
 
     setIsBatchProcessing(true);
     const toastId = toast.loading(
-      `正在删除 ${selectedTrashKeys.length} 个文件...`
+      t("正在删除 {0} 个文件...", selectedTrashKeys.length)
     );
 
     try {
@@ -118,7 +124,7 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
           deleteFilesLocalByType([item.name], FileType.Trash);
         },
         (current, total) => {
-          toast.loading(`正在删除 ${current}/${total} 个文件...`, {
+          toast.loading(t("正在删除 {0}/{1} 个文件...", current, total), {
             id: toastId,
           });
         },
@@ -126,11 +132,14 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
       );
 
       clearSelection(FileType.Trash);
-      toast.success(`已永久删除 ${selectedTrashKeys.length} 个文件`, {
+      toast.success(t("已永久删除 {0} 个文件", selectedTrashKeys.length), {
         id: toastId,
       });
-    } catch (_error) {
-      toast.error("批量删除失败", { id: toastId });
+    } catch (error) {
+      toast.error(t("批量删除失败"), {
+        id: toastId,
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setIsBatchProcessing(false);
     }
@@ -138,10 +147,11 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
 
   const handleEmptyTrash = async () => {
     if (isEmpty) return;
-    if (!confirm("确定清空回收站吗？所有文件将被永久删除且无法恢复！")) return;
+    if (!confirm(t("确定清空回收站吗？所有文件将被永久删除且无法恢复！")))
+      return;
 
     setIsBatchProcessing(true);
-    const toastId = toast.loading("正在清空回收站...");
+    const toastId = toast.loading(t("正在清空回收站..."));
 
     try {
       // 注意：这里只删除当前已加载的 items。如果后端没有清空接口，只能这样处理。
@@ -155,16 +165,19 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
           deleteFilesLocalByType([item.name], FileType.Trash);
         },
         (current, total) => {
-          toast.loading(`正在删除 ${current}/${total} 个文件...`, {
+          toast.loading(t("正在删除 {0}/{1} 个文件...", current, total), {
             id: toastId,
           });
         },
         10
       );
 
-      toast.success("回收站已清空", { id: toastId });
-    } catch (_error) {
-      toast.error("清空回收站失败", { id: toastId });
+      toast.success(t("回收站已清空"), { id: toastId });
+    } catch (error) {
+      toast.error(t("清空回收站失败"), {
+        id: toastId,
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setIsBatchProcessing(false);
     }
@@ -174,9 +187,11 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:w-[540px] flex flex-col p-0 bg-background/95 backdrop-blur-xl border-l border-border">
         <SheetHeader className="px-6 py-4 border-b border-border">
-          <SheetTitle className="flex items-center gap-2">回收站</SheetTitle>
+          <SheetTitle className="flex items-center gap-2">
+            {t("回收站")}
+          </SheetTitle>
           <SheetDescription className="text-sm text-foreground/80">
-            文件将于 30 天后永久删除。{" "}
+            {t("文件将于 30 天后永久删除。")}{" "}
             {!isEmpty && (
               <Button
                 variant="outline"
@@ -190,7 +205,7 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
                 ) : (
                   <Trash2 className="h-4 w-4 mr-1" />
                 )}
-                清空回收站
+                {t("清空回收站")}
               </Button>
             )}
           </SheetDescription>
@@ -200,7 +215,7 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
           {isEmpty && !trashBucket.loading ? (
             <div className="h-full flex flex-col items-center justify-center text-foreground/80 gap-2 min-h-[300px]">
               <Trash2 className="h-12 w-12 opacity-20" />
-              <p>Trash is empty</p>
+              <p>{t("回收站为空")}</p>
             </div>
           ) : (
             <div className="space-y-1">
@@ -222,7 +237,7 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
                     onClick={handleLoadMore}
                     className="text-foreground/60 hover:text-foreground"
                   >
-                    Load More
+                    {t("加载更多")}
                   </Button>
                 </div>
               )}
@@ -234,7 +249,7 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
         {hasSelection && (
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-background/95 backdrop-blur-xl flex items-center justify-between animate-in slide-in-from-bottom-5">
             <div className="text-sm font-medium">
-              {selectedTrashKeys.length} selected
+              {t("已选择 {0} 项", selectedTrashKeys.length)}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -249,7 +264,7 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
                 ) : (
                   <RefreshCcw className="h-4 w-4" />
                 )}
-                Restore
+                {t("还原")}
               </Button>
               <Button
                 variant="destructive"
@@ -263,7 +278,7 @@ export function TrashSheet({ open, onOpenChange }: TrashSheetProps) {
                 ) : (
                   <Trash2 className="h-4 w-4" />
                 )}
-                Delete
+                {t("删除")}
               </Button>
             </div>
           </div>

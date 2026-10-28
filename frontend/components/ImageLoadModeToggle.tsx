@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { Image, ImageOff, ZapOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,12 +20,37 @@ import { ImageLoadMode } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const MODES = {
-  [ImageLoadMode.Default]: { label: "默认", icon: Image, desc: "全量加载" },
-  [ImageLoadMode.DataSaver]: { label: "省流", icon: ZapOff, desc: `跳过大图` },
-  [ImageLoadMode.NoImage]: { label: "无图", icon: ImageOff, desc: "禁用图片" },
+  [ImageLoadMode.Default]: {
+    get label() {
+      return t("默认");
+    },
+    icon: Image,
+    get desc() {
+      return t("全量加载");
+    },
+  },
+  [ImageLoadMode.DataSaver]: {
+    get label() {
+      return t("省流");
+    },
+    icon: ZapOff,
+    get desc() {
+      return t("跳过大图");
+    },
+  },
+  [ImageLoadMode.NoImage]: {
+    get label() {
+      return t("无图");
+    },
+    icon: ImageOff,
+    get desc() {
+      return t("禁用图片");
+    },
+  },
 };
 
 export function ImageLoadModeToggle() {
+  useLocale();
   const store = useGeneralSettingsStoreClient();
 
   // store 为 null 表示 SSR 阶段，渲染骨架占位

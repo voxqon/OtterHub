@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useEffect, useState } from "react";
 import { usePreviewStore } from "@/stores/preview-store";
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { DraggablePreviewBookmark } from "./DraggablePreviewBookmark";
 
 export function GlobalTextReader() {
+  useLocale();
   const { audio, video, text, minimize, maximize, close } = usePreviewStore();
   const activeFile = text?.file;
   const viewState = text?.viewState;
@@ -34,11 +36,11 @@ export function GlobalTextReader() {
       try {
         const url = getFileUrl(activeFile.name);
         const res = await fetch(url);
-        if (!res.ok) throw new Error("加载文件失败");
+        if (!res.ok) throw new Error(t("加载文件失败"));
         const text = await res.text();
         setContent(text);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "未知错误");
+        setError(err instanceof Error ? err.message : t("未知错误"));
       } finally {
         setLoading(false);
       }
@@ -52,10 +54,10 @@ export function GlobalTextReader() {
     try {
       await navigator.clipboard.writeText(content);
       setCopied(true);
-      toast.success("已复制到剪贴板");
+      toast.success(t("已复制到剪贴板"));
       setTimeout(() => setCopied(false), 2000);
     } catch (_err) {
-      toast.error("复制失败");
+      toast.error(t("复制失败"));
     }
   };
 
@@ -67,7 +69,7 @@ export function GlobalTextReader() {
         if (result.status === "cancelled") return;
       })
       .catch(() => {
-        toast.error("下载失败");
+        toast.error(t("下载失败"));
       });
   };
 
@@ -91,14 +93,14 @@ export function GlobalTextReader() {
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-secondary/10">
             <h3 className="font-semibold truncate pr-4 max-w-[60%]">
-              {activeFile.metadata?.fileName || "文本查看器"}
+              {activeFile.metadata?.fileName || t("文本查看器")}
             </h3>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => minimize("text")}
-                title="最小化"
+                title={t("最小化")}
               >
                 <Minus className="h-4 w-4" />
               </Button>
@@ -106,7 +108,7 @@ export function GlobalTextReader() {
                 variant="ghost"
                 size="icon"
                 onClick={() => close("text")}
-                title="关闭"
+                title={t("关闭")}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -122,7 +124,7 @@ export function GlobalTextReader() {
                   size="icon"
                   className="h-8 w-8 bg-background/80 backdrop-blur-sm shadow-sm transition-colors"
                   onClick={handleCopy}
-                  title="复制内容"
+                  title={t("复制内容")}
                 >
                   {copied ? (
                     <CopyCheck className="h-4 w-4 text-green-500" />
@@ -135,7 +137,7 @@ export function GlobalTextReader() {
                   size="icon"
                   className="h-8 w-8 bg-background/80 backdrop-blur-sm shadow-sm transition-colors"
                   onClick={handleDownload}
-                  title="下载文件"
+                  title={t("下载文件")}
                 >
                   <Download className="h-4 w-4" />
                 </Button>
@@ -145,7 +147,7 @@ export function GlobalTextReader() {
             <div className="flex-1 w-full overflow-auto p-6 scrollbar-thin scrollbar-thumb-secondary">
               {loading ? (
                 <div className="flex h-full items-center justify-center text-muted-foreground">
-                  <span className="animate-pulse">加载中...</span>
+                  <span className="animate-pulse">{t("加载中...")}</span>
                 </div>
               ) : error ? (
                 <div className="flex h-full items-center justify-center text-destructive">

@@ -11,6 +11,7 @@ import {
   Chunk,
   FileType,
   GeneralSettings,
+  TelegramMessageRef,
 } from "@shared/types";
 import {
   parseRangeHeader,
@@ -33,6 +34,8 @@ import { MAX_CHUNK_SIZE } from "@shared/types";
 import { analyzeImageAndEnrich, isSupportedImage } from "../ai/image-analysis";
 import { kvGetJSON } from "@utils/kv";
 import { CF } from "types";
+import { chunkReceiptKey, getStoredChunks } from "../chunk-upload";
+import { extractKeyFromTrash } from "./shared-utils";
 
 // Telegram存储适配器实现
 export class TGAdapter extends BaseAdapter {
@@ -120,9 +123,20 @@ export class TGAdapter extends BaseAdapter {
     }
 
     const key = buildKeyId(fileType, tgFileId, ext);
+    metadata.telegramMessages = [
+      {
+        chatId: result.data.result.chat?.id ?? this.env.TG_CHAT_ID,
+        messageId: result.data.result.message_id,
+      },
+    ];
 
     const kv = this.env[this.kvName];
     if (kv) {
+      const existing = await kv.getWithMetadata(key);
+      metadata.telegramMessages = [
+        ...(existing.metadata?.telegramMessages ?? []),
+        ...metadata.telegramMessages,
+      ];
       await kv.put(key, "", { metadata });
     }
 
@@ -197,7 +211,11 @@ export class TGAdapter extends BaseAdapter {
     parentKey: string,
     chunkIndex: number,
     fileName?: string
-  ): Promise<{ chunkId: string; thumbUrl?: string }> {
+  ): Promise<{
+    chunkId: string;
+    thumbUrl?: string;
+    telegramMessage: TelegramMessageRef;
+  }> {
     const formData = new FormData();
     formData.append("chat_id", this.env.TG_CHAT_ID);
 
@@ -236,7 +254,14 @@ export class TGAdapter extends BaseAdapter {
       }
     }
 
-    return { chunkId, thumbUrl };
+    return {
+      chunkId,
+      thumbUrl,
+      telegramMessage: {
+        chatId: result.result.chat?.id ?? this.env.TG_CHAT_ID,
+        messageId: result.result.message_id,
+      },
+    };
   }
 
   async get(key: string, req?: Request, item?: FileRecord): Promise<Response> {
@@ -442,15 +467,67 @@ export class TGAdapter extends BaseAdapter {
   }
 
   async delete(key: string): Promise<{ isDeleted: boolean }> {
-    try {
-      // Telegram API不支持直接删除文件
-      // 只从KV存储中删除文件信息
-      await this.env[this.kvName].delete(key);
-
-      return { isDeleted: true };
-    } catch (error) {
-      return { isDeleted: false };
+    const kv = this.env[this.kvName];
+    const item = await this.getFileMetadataWithValue(key);
+    if (!item) return { isDeleted: false };
+    const originalKey = extractKeyFromTrash(key);
+    const chunks = item.metadata.chunkInfo
+      ? await getStoredChunks(kv, originalKey, item.value)
+      : [];
+    const messages = [
+      ...(item.metadata.telegramMessages ?? []),
+      ...chunks.flatMap((chunk) =>
+        chunk.telegramMessage ? [chunk.telegramMessage] : []
+      ),
+    ];
+    if (
+      (!item.metadata.chunkInfo && messages.length === 0) ||
+      chunks.some((chunk) => !chunk.telegramMessage)
+    ) {
+      throw new Error(
+        "Telegram message reference is missing; remove the original message manually"
+      );
     }
+    const unique = new Map(
+      messages.map((message) => [
+        `${message.chatId}:${message.messageId}`,
+        message,
+      ])
+    );
+    // Keep the record until every upstream deletion succeeds. Missing messages
+    // count as deleted so a partially completed operation can be retried.
+    for (const message of unique.values()) {
+      const response = await fetch(
+        buildTgApiUrl(
+          this.env.TG_BOT_TOKEN,
+          "deleteMessage",
+          this.env.TG_API_BASE_URL
+        ),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: message.chatId,
+            message_id: message.messageId,
+          }),
+          signal: AbortSignal.timeout(15_000),
+        }
+      );
+      const result: any = await response.json().catch(() => ({}));
+      const alreadyDeleted =
+        response.status === 400 &&
+        result.description === "Bad Request: message to delete not found";
+      if ((!response.ok || !result.ok) && !alreadyDeleted) {
+        throw new Error(
+          `Telegram message deletion failed: ${result.description || response.status}`
+        );
+      }
+    }
+    await Promise.all(
+      chunks.map((chunk) => kv.delete(chunkReceiptKey(originalKey, chunk.idx)))
+    );
+    await kv.delete(key);
+    return { isDeleted: true };
   }
 
   // https://core.telegram.org/bots/api#sending-files

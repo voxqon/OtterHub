@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { Plus, Tag } from "lucide-react";
 import { FileTag } from "@shared/types";
@@ -23,8 +24,9 @@ export function TagSelector({
   tags,
   onChange,
   disabled = false,
-  placeholder = "添加标签...",
+  placeholder = t("添加标签..."),
 }: TagSelectorProps) {
+  useLocale();
   // 获取可添加的标签（已添加的不再显示）
   const availableTags = Object.values(FileTag).filter(
     (tag) => !tags.includes(tag)

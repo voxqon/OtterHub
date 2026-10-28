@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import React, { useRef, useState } from "react";
 import { X } from "lucide-react";
@@ -32,6 +33,7 @@ export function DraggablePreviewBookmark({
   onActivate,
   onClose,
 }: DraggablePreviewBookmarkProps) {
+  useLocale();
   const topRatio = usePreviewLayoutStore((s) => s.bookmarkPositions[type]);
   const setBookmarkPosition = usePreviewLayoutStore(
     (s) => s.setBookmarkPosition
@@ -133,7 +135,7 @@ export function DraggablePreviewBookmark({
           size="icon"
           className="h-5 w-5 rounded-full bg-gray-500/80 hover:bg-destructive text-white shadow-sm p-0.5"
           onClick={onClose}
-          title="关闭"
+          title={t("关闭")}
         >
           <X className="h-3 w-3" />
         </Button>

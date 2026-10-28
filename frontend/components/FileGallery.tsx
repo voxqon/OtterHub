@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import {
   useActiveBucket,
@@ -27,6 +28,7 @@ function FileViewRenderer({
   viewMode: ViewMode;
   files: any[];
 }) {
+  useLocale();
   if (viewMode === ViewMode.Grid) {
     return (
       // 100%缩放时每行5个文件
@@ -57,6 +59,7 @@ function FileViewRenderer({
 }
 
 export function FileGallery() {
+  useLocale();
   const {
     viewMode,
     itemsPerPage,
@@ -102,7 +105,7 @@ export function FileGallery() {
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-2 text-xs sm:text-sm text-foreground/60 font-medium">
           <span className="px-2.5 py-1 rounded-lg bg-secondary/30 border border-glass-border">
-            {files.length} 个文件
+            {t("共 {0} 个文件", files.length)}
           </span>
           {bucket.hasMore && (
             <Button
@@ -111,7 +114,11 @@ export function FileGallery() {
               variant="ghost"
               size="sm"
               title={
-                bucket.loading ? "加载中" : bucket.error ? "重试" : "加载更多"
+                bucket.loading
+                  ? t("加载中")
+                  : bucket.error
+                    ? t("重试")
+                    : t("加载更多")
               }
               className="h-7 w-7 p-0 rounded-lg border border-primary/20 text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
             >

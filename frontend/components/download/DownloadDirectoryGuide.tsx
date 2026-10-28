@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { FolderOpen, Save, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,14 +20,22 @@ const FEATURES = [
   {
     Icon: FolderOpen,
     color: "text-blue-500",
-    title: "推荐目录",
-    desc: "建议创建并选择 Downloads / OtterHub 目录",
+    get title() {
+      return t("推荐目录");
+    },
+    get desc() {
+      return t("建议创建并选择 Downloads / OtterHub 目录");
+    },
   },
   {
     Icon: Save,
     color: "text-purple-500",
-    title: "记住选择",
-    desc: "大文件和批量下载时自动使用选择的目录",
+    get title() {
+      return t("记住选择");
+    },
+    get desc() {
+      return t("大文件和批量下载时自动使用选择的目录");
+    },
   },
 ];
 
@@ -41,6 +50,7 @@ export function DownloadDirectoryGuide({
   onOpenChange,
   onDirectorySelected,
 }: Props) {
+  useLocale();
   const handleSelect = () =>
     pickDownloadDirectoryForFirstTime().then(
       (r) => r && onDirectorySelected(r)
@@ -52,10 +62,10 @@ export function DownloadDirectoryGuide({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FolderPlus className="h-5 w-5 text-primary" />
-            选择下载目录
+            {t("选择下载目录")}
           </DialogTitle>
           <DialogDescription>
-            首次保存大文件或批量下载时，需要选择下载目录
+            {t("首次保存大文件或批量下载时，需要选择下载目录")}
           </DialogDescription>
         </DialogHeader>
 
@@ -76,9 +86,9 @@ export function DownloadDirectoryGuide({
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t("取消")}
           </Button>
-          <Button onClick={handleSelect}>选择目录</Button>
+          <Button onClick={handleSelect}>{t("选择目录")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n/core";
 import { client } from "./client";
 import { API_URL, unwrap } from "./config";
 import {
@@ -36,11 +37,11 @@ async function parseApiResponse<T>(raw: string): Promise<T> {
   try {
     body = JSON.parse(raw) as ApiResponse<T>;
   } catch {
-    throw new Error(raw || "请求失败");
+    throw new Error(raw || t("请求失败"));
   }
 
   if (!body.success) {
-    throw new Error(body.message || "请求失败");
+    throw new Error(body.message || t("请求失败"));
   }
 
   return body.data as T;
@@ -88,9 +89,10 @@ function xhrPostForm<T>(
           }
         };
 
-        xhr.onerror = () => reject(new Error("网络错误"));
-        xhr.onabort = () => reject(new Error("请求已取消"));
-        xhr.ontimeout = () => reject(new Error("上传超时，请重试或继续上传"));
+        xhr.onerror = () => reject(new Error(t("网络错误")));
+        xhr.onabort = () => reject(new Error(t("请求已取消")));
+        xhr.ontimeout = () =>
+          reject(new Error(t("上传超时，请重试或继续上传")));
 
         xhr.send(form);
       })

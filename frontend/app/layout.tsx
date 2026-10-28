@@ -1,12 +1,13 @@
-import type React from "react"
-import type { Metadata, Viewport } from "next"
-import "./globals.css"
-import { Toaster } from "sonner"
-import { ThemeProvider } from "@/components/ui/theme-provider"
-import "react-photo-view/dist/react-photo-view.css"
+import type React from "react";
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/ui/theme-provider";
+import "react-photo-view/dist/react-photo-view.css";
 import { APP_DESC_CN, APP_DESC_EN, APP_NAME } from "@/lib/ui-text";
-import { GlobalPreviewLayer } from "@/components/preview/GlobalPreviewLayer"
-import { PwaRegister } from "@/components/pwa/PwaRegister"
+import { GlobalPreviewLayer } from "@/components/preview/GlobalPreviewLayer";
+import { PwaRegister } from "@/components/pwa/PwaRegister";
+import { LocaleProvider } from "@/lib/i18n";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -14,7 +15,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   viewportFit: "cover",
   themeColor: "#00cd99",
-}
+};
 
 export const metadata: Metadata = {
   title: `${APP_NAME} - ${APP_DESC_EN}`,
@@ -42,39 +43,41 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-icon.png",
   },
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <PwaRegister />
-          {children}
-          <GlobalPreviewLayer />
-          <Toaster
-            position="top-center"
-            richColors
-            expand={true}
-            visibleToasts={3}
-            gap={12}
-            pauseWhenPageIsHidden
-            toastOptions={{
-              duration: 3000,
-              closeButton: true,
-            }}
-          />
-        </ThemeProvider>
+        <LocaleProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <PwaRegister />
+            {children}
+            <GlobalPreviewLayer />
+            <Toaster
+              position="top-center"
+              richColors
+              expand={true}
+              visibleToasts={3}
+              gap={12}
+              pauseWhenPageIsHidden
+              toastOptions={{
+                duration: 3000,
+                closeButton: true,
+              }}
+            />
+          </ThemeProvider>
+        </LocaleProvider>
       </body>
     </html>
-  )
+  );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useCallback, useEffect, useState, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
@@ -40,6 +41,7 @@ const FileIconByType = ({
   category: string;
   className?: string;
 }) => {
+  useLocale();
   const icons: Record<string, any> = {
     image: Image,
     video: Video,
@@ -58,6 +60,7 @@ const triggerDownload = (url: string, filename: string) => {
 };
 
 function ShareContent() {
+  useLocale();
   const token = useSearchParams().get("k");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,11 +69,11 @@ function ShareContent() {
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!token) return (setError("Invalid link"), setLoading(false));
+    if (!token) return (setError("链接无效"), setLoading(false));
     shareApi
       .getMeta(token)
       .then(setMeta)
-      .catch((err) => setError(err.message || "Failed to load file info"))
+      .catch(() => setError("无法读取文件信息"))
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -162,7 +165,11 @@ function ShareContent() {
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground font-medium">
                 {isBundle
-                  ? `${meta?.files?.length || 0} 个文件 · ${formatFileSize(meta?.totalSize || 0)}`
+                  ? t(
+                      "{0} 个文件 · {1}",
+                      meta?.files?.length || 0,
+                      formatFileSize(meta?.totalSize || 0)
+                    )
                   : formatFileSize(meta?.fileSize || 0)}
               </p>
             </div>
@@ -276,17 +283,17 @@ function ShareContent() {
               {isActioning ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  下载中...
+                  {t("下载中...")}
                 </>
               ) : isBundle ? (
                 <>
                   <Archive className="mr-2 h-5 w-5" />
-                  下载全部 (ZIP)
+                  {t("下载全部 (ZIP)")}
                 </>
               ) : (
                 <>
                   <Download className="mr-2 h-5 w-5" />
-                  下载文件
+                  {t("下载文件")}
                 </>
               )}
             </Button>
@@ -302,36 +309,45 @@ function ShareContent() {
 }
 
 // 抽取的小组件提升可读性
-const FullScreenLoader = () => (
-  <div className="flex min-h-screen items-center justify-center bg-background">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
+const FullScreenLoader = () => {
+  useLocale();
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+};
 
-const ErrorCard = ({ error }: { error: string }) => (
-  <div className="flex min-h-screen items-center justify-center bg-background p-4">
-    <Card className="w-full max-w-md border-destructive/50 bg-destructive/5 text-center">
-      <CardHeader>
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
-          <AlertCircle className="h-6 w-6 text-destructive" />
+const ErrorCard = ({ error }: { error: string }) => {
+  useLocale();
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md border-destructive/50 bg-destructive/5 text-center">
+        <CardHeader>
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+            <AlertCircle className="h-6 w-6 text-destructive" />
+          </div>
+          <CardTitle className="text-destructive">{t("链接不可用")}</CardTitle>
+        </CardHeader>
+        <CardContent className="text-muted-foreground">{t(error)}</CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const StatusBadges = ({ meta }: { meta: ShareMetaResponse | null }) => {
+  useLocale();
+  return (
+    <div className="flex flex-col gap-2">
+      {meta?.expiresAt && (
+        <div className="flex items-center justify-center gap-2 rounded-lg bg-blue-500/10 px-3 py-2 text-sm text-blue-600">
+          <CalendarClock className="h-4 w-4" />
+          {t("将于 {0} 过期", formatTime(meta.expiresAt))}
         </div>
-        <CardTitle className="text-destructive">Link Unavailable</CardTitle>
-      </CardHeader>
-      <CardContent className="text-muted-foreground">{error}</CardContent>
-    </Card>
-  </div>
-);
-
-const StatusBadges = ({ meta }: { meta: ShareMetaResponse | null }) => (
-  <div className="flex flex-col gap-2">
-    {meta?.expiresAt && (
-      <div className="flex items-center justify-center gap-2 rounded-lg bg-blue-500/10 px-3 py-2 text-sm text-blue-600">
-        <CalendarClock className="h-4 w-4" />
-        将于 {formatTime(meta.expiresAt)} 过期
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
+};
 
 const PreviewModal = ({
   file,
@@ -341,6 +357,7 @@ const PreviewModal = ({
   onClose,
   onNav,
 }: any) => {
+  useLocale();
   const cat = getFileCategory(file.name);
   const url = shareApi.getDownloadUrl(token, file.key);
 
@@ -421,6 +438,7 @@ const PreviewModal = ({
 };
 
 export default function SharePage() {
+  useLocale();
   return (
     <Suspense fallback={<FullScreenLoader />}>
       <ShareContent />

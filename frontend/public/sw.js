@@ -1,4 +1,4 @@
-const CACHE_NAME = "otterhub-shell-v2";
+const CACHE_NAME = "otterhub-shell-v3";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE_URLS = [
   "/",

@@ -1,3 +1,6 @@
+"use client";
+
+import { t, useLocale } from "@/lib/i18n";
 import {
   MoreVertical,
   Download,
@@ -40,6 +43,7 @@ export function FileActions({
   onShare,
   isLiked,
 }: FileActionsProps) {
+  useLocale();
   const IconColor = "text-foreground/80";
   return (
     <div className="flex items-center gap-1">
@@ -47,7 +51,7 @@ export function FileActions({
       <Button
         variant="ghost"
         size="icon"
-        title="收藏"
+        title={t("收藏")}
         className="h-10 w-10 text-foreground/80 hover:text-foreground bg-secondary/50 hover:bg-secondary/80 backdrop-blur-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity rounded-xl"
         onClick={(e) => {
           e.stopPropagation();
@@ -69,7 +73,7 @@ export function FileActions({
           <Button
             variant="ghost"
             size="icon"
-            title="更多操作"
+            title={t("更多操作")}
             className="h-10 w-10 text-foreground hover:text-foreground bg-secondary/50 hover:bg-secondary/80 backdrop-blur-sm opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity rounded-xl"
             onClick={(e) => e.stopPropagation()}
           >
@@ -89,7 +93,7 @@ export function FileActions({
             className="text-foreground hover:bg-secondary/50"
           >
             <Eye className={`h-4 w-4 mr-2 ${IconColor}`} />
-            查看
+            {t("查看")}
           </DropdownMenuItem>
 
           {/* 分享 */}
@@ -101,7 +105,7 @@ export function FileActions({
             className="text-foreground hover:bg-secondary/50"
           >
             <Share2 className={`h-4 w-4 mr-2 ${IconColor}`} />
-            分享
+            {t("分享")}
           </DropdownMenuItem>
 
           {/* 复制链接 */}
@@ -113,7 +117,7 @@ export function FileActions({
             className="text-foreground hover:bg-secondary/50"
           >
             <Link className={`h-4 w-4 mr-2 ${IconColor}`} />
-            复制链接
+            {t("复制链接")}
           </DropdownMenuItem>
 
           {/* 编辑 */}
@@ -125,7 +129,7 @@ export function FileActions({
             className="text-foreground hover:bg-secondary/50"
           >
             <Edit className={`h-4 w-4 mr-2 ${IconColor}`} />
-            编辑
+            {t("编辑")}
           </DropdownMenuItem>
 
           {/* 下载 */}
@@ -137,7 +141,7 @@ export function FileActions({
             className="text-foreground hover:bg-secondary/50"
           >
             <Download className={`h-4 w-4 mr-2 ${IconColor}`} />
-            下载
+            {t("下载")}
           </DropdownMenuItem>
 
           {/* 详情 */}
@@ -149,7 +153,7 @@ export function FileActions({
             className="text-foreground hover:bg-secondary/50"
           >
             <Info className={`h-4 w-4 mr-2 ${IconColor}`} />
-            详情
+            {t("详情")}
           </DropdownMenuItem>
 
           {/* 删除 */}
@@ -161,7 +165,7 @@ export function FileActions({
             className="text-red-400 hover:bg-red-500/10"
           >
             <Trash2 className={`h-4 w-4 mr-2 ${IconColor}`} />
-            删除
+            {t("删除")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -1,11 +1,12 @@
 openapi: 3.0.3
 info:
   title: Telegram Bot API subset for OtterHub regression tests
-  version: 1.0.0
+  version: 1.1.0
   description: >
     Local test contract for the Telegram operations OtterHub calls.
     Based on https://core.telegram.org/bots/api#getfile and
-    https://core.telegram.org/bots/api#senddocument. This is not the full provider spec.
+    https://core.telegram.org/bots/api#senddocument and
+    https://core.telegram.org/bots/api#deletemessage. This is not the full provider spec.
 servers:
   - url: https://api.telegram.org
 paths:
@@ -35,6 +36,7 @@ paths:
                 ok: true
                 result:
                   message_id: 1
+                  chat: { id: -1001234567890 }
                   document: { file_id: uploaded-1, file_size: 4 }
         "400":
           description: Invalid request; retrying unchanged cannot fix it
@@ -42,6 +44,68 @@ paths:
           description: Invalid bot token
         "429":
           description: Rate limit; parameters.retry_after is in seconds
+  /bot{token}/deleteMessage:
+    post:
+      description: >
+        Delete the stored chat message before removing the file index. Telegram
+        normally requires messages to be under 48 hours old and the bot to have
+        the appropriate chat permissions. An already missing message is treated
+        as deleted by OtterHub so a partial deletion can be retried.
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chat_id, message_id]
+              properties:
+                chat_id:
+                  oneOf:
+                    - { type: string }
+                    - { type: integer, format: int64 }
+                message_id: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Message deleted
+          content:
+            application/json:
+              example: { ok: true, result: true }
+        "400":
+          description: Message is missing or cannot be deleted due to Telegram restrictions
+        "403":
+          description: Bot lacks permission to delete the message
+        "429":
+          description: Rate limited; retain the index and retry later
+  /bot{token}/sendMessage:
+    post:
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chat_id, text]
+              properties:
+                chat_id: { type: integer, format: int64 }
+                text: { type: string }
+                reply_to_message_id: { type: integer }
+                parse_mode: { type: string }
+                disable_web_page_preview: { type: boolean }
+                allow_sending_without_reply: { type: boolean }
+      responses:
+        "200":
+          description: Upload notice; its message_id is also recorded for deletion
+          content:
+            application/json:
+              example:
+                {
+                  ok: true,
+                  result: { message_id: 2, chat: { id: -1001234567890 } },
+                }
   /bot{token}/getFile:
     get:
       parameters:

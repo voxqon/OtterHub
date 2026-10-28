@@ -1,7 +1,16 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import * as React from "react";
-import { Filter, Heart, Tag, Calendar as CalendarIcon, X, AlertTriangle, Lock } from "lucide-react";
+import {
+  Filter,
+  Heart,
+  Tag,
+  Calendar as CalendarIcon,
+  X,
+  AlertTriangle,
+  Lock,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -10,7 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { useFileQueryStore } from "@/stores/file"
+import { useFileQueryStore } from "@/stores/file";
 import { cn, TAG_CONFIG } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
 import { FileTag } from "@shared/types";
@@ -20,6 +29,7 @@ import { FileTag } from "@shared/types";
  * 支持收藏、标签、日期范围筛选
  */
 export function FilterDropdown() {
+  const locale = useLocale();
   const {
     filterLiked,
     filterTags,
@@ -27,9 +37,9 @@ export function FilterDropdown() {
     setFilterLiked,
     setFilterTags,
     setFilterDateRange,
-    resetFilters
+    resetFilters,
   } = useFileQueryStore();
-  
+
   const availableTags = Object.values(FileTag);
 
   const activeFiltersCount = [
@@ -51,8 +61,12 @@ export function FilterDropdown() {
   };
 
   const handleDateSelect = (range: DateRange | undefined) => {
-    const start = range?.from ? new Date(range.from).setHours(0, 0, 0, 0) : undefined;
-    const end = range?.to ? new Date(range.to).setHours(23, 59, 59, 999) : undefined;
+    const start = range?.from
+      ? new Date(range.from).setHours(0, 0, 0, 0)
+      : undefined;
+    const end = range?.to
+      ? new Date(range.to).setHours(23, 59, 59, 999)
+      : undefined;
 
     setFilterDateRange({
       start,
@@ -73,7 +87,11 @@ export function FilterDropdown() {
 
     switch (type) {
       case "today":
-        start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).setHours(0, 0, 0, 0);
+        start = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        ).setHours(0, 0, 0, 0);
         break;
       case "7d":
         start = new Date(now.setDate(now.getDate() - 6)).setHours(0, 0, 0, 0);
@@ -82,7 +100,12 @@ export function FilterDropdown() {
         start = new Date(now.setDate(now.getDate() - 29)).setHours(0, 0, 0, 0);
         break;
       case "month":
-        start = new Date(now.getFullYear(), now.getMonth(), 1).setHours(0, 0, 0, 0);
+        start = new Date(now.getFullYear(), now.getMonth(), 1).setHours(
+          0,
+          0,
+          0,
+          0
+        );
         break;
     }
 
@@ -90,22 +113,41 @@ export function FilterDropdown() {
   };
 
   // 判断当前选中的快捷时间选项
-  const getActiveQuickDate = (): "today" | "7d" | "30d" | "month" | "custom" | null => {
+  const getActiveQuickDate = ():
+    | "today"
+    | "7d"
+    | "30d"
+    | "month"
+    | "custom"
+    | null => {
     if (!filterDateRange.start || !filterDateRange.end) return null;
-    
+
     const now = new Date();
     const end = new Date(now).setHours(23, 59, 59, 999);
     const start = filterDateRange.start;
-    
+
     // 今天的开始时间
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).setHours(0, 0, 0, 0);
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate()
+    ).setHours(0, 0, 0, 0);
     // 7天前的开始时间
-    const sevenDaysAgo = new Date(new Date().setDate(now.getDate() - 6)).setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date(
+      new Date().setDate(now.getDate() - 6)
+    ).setHours(0, 0, 0, 0);
     // 30天前的开始时间
-    const thirtyDaysAgo = new Date(new Date().setDate(now.getDate() - 29)).setHours(0, 0, 0, 0);
+    const thirtyDaysAgo = new Date(
+      new Date().setDate(now.getDate() - 29)
+    ).setHours(0, 0, 0, 0);
     // 本月开始时间
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).setHours(0, 0, 0, 0);
-    
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
     if (start === todayStart && filterDateRange.end === end) return "today";
     if (start === sevenDaysAgo && filterDateRange.end === end) return "7d";
     if (start === thirtyDaysAgo && filterDateRange.end === end) return "30d";
@@ -116,7 +158,7 @@ export function FilterDropdown() {
   const activeQuickDate = getActiveQuickDate();
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString("zh-CN", {
+    return date.toLocaleDateString(locale, {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -144,20 +186,26 @@ export function FilterDropdown() {
             )}
           >
             <Filter className="h-4 w-4" />
-            <span className="hidden sm:inline">筛选</span>
+            <span className="hidden sm:inline">{t("筛选")}</span>
             {activeFiltersCount > 0 && (
-              <Badge variant="secondary" className="ml-1 h-5 px-1 min-w-5 justify-center bg-primary/20 text-primary border-none">
+              <Badge
+                variant="secondary"
+                className="ml-1 h-5 px-1 min-w-5 justify-center bg-primary/20 text-primary border-none"
+              >
                 {activeFiltersCount}
               </Badge>
             )}
           </Button>
         </div>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0 overflow-hidden bg-popover border-glass-border shadow-xl text-foreground">
+      <PopoverContent
+        align="end"
+        className="w-80 p-0 overflow-hidden bg-popover border-glass-border shadow-xl text-foreground"
+      >
         <div className="p-4 space-y-5">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-medium text-foreground/70 uppercase tracking-wider">
-              筛选
+              {t("筛选")}
             </h4>
             {activeFiltersCount > 0 && (
               <Button
@@ -167,7 +215,7 @@ export function FilterDropdown() {
                 className="h-6 px-2 text-[10px] text-foreground/50 hover:text-destructive hover:bg-destructive/10"
               >
                 <X className="h-3 w-3" />
-                清除
+                {t("清除")}
               </Button>
             )}
           </div>
@@ -176,7 +224,7 @@ export function FilterDropdown() {
           <div className="space-y-2.5">
             <div className="text-[11px] text-foreground/50 flex items-center gap-1.5 px-0.5">
               <Heart className="h-3 w-3" />
-              <span>状态</span>
+              <span>{t("状态")}</span>
             </div>
             <Button
               variant={filterLiked ? "default" : "outline"}
@@ -184,13 +232,15 @@ export function FilterDropdown() {
               onClick={() => setFilterLiked(!filterLiked)}
               className={cn(
                 "w-full justify-start gap-2 h-9 text-xs transition-all",
-                filterLiked 
-                  ? "bg-primary text-primary-foreground shadow-sm" 
+                filterLiked
+                  ? "bg-primary text-primary-foreground shadow-sm"
                   : "bg-transparent border-glass-border hover:border-primary/50"
               )}
             >
-              <Heart className={cn("h-3.5 w-3.5", filterLiked && "fill-current")} />
-              <span>只看收藏内容</span>
+              <Heart
+                className={cn("h-3.5 w-3.5", filterLiked && "fill-current")}
+              />
+              <span>{t("只看收藏内容")}</span>
             </Button>
           </div>
 
@@ -199,7 +249,7 @@ export function FilterDropdown() {
             <div className="space-y-2.5">
               <div className="text-[11px] text-foreground/50 flex items-center gap-1.5 px-0.5">
                 <Tag className="h-3 w-3" />
-                <span>标签</span>
+                <span>{t("标签")}</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {availableTags.map((tag) => {
@@ -222,7 +272,9 @@ export function FilterDropdown() {
                       )}
                       onClick={() => toggleTag(tag)}
                     >
-                      {tag === FileTag.NSFW && <AlertTriangle className="h-3 w-3" />}
+                      {tag === FileTag.NSFW && (
+                        <AlertTriangle className="h-3 w-3" />
+                      )}
                       {tag === FileTag.Private && <Lock className="h-3 w-3" />}
                       {config?.label || tag}
                     </Badge>
@@ -237,9 +289,9 @@ export function FilterDropdown() {
             <div className="flex items-center justify-between">
               <div className="text-[11px] text-foreground/50 flex items-center gap-1.5 px-0.5">
                 <CalendarIcon className="h-3 w-3" />
-                <span>上传时间</span>
+                <span>{t("上传时间")}</span>
               </div>
-              
+
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -256,7 +308,7 @@ export function FilterDropdown() {
                       ? selectedRange.to
                         ? `${formatDate(selectedRange.from)} - ${formatDate(selectedRange.to)}`
                         : formatDate(selectedRange.from)
-                      : "自定义范围"}
+                      : t("自定义范围")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
@@ -271,7 +323,7 @@ export function FilterDropdown() {
                 </PopoverContent>
               </Popover>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-2">
               <Button
                 variant={activeQuickDate === "today" ? "default" : "outline"}
@@ -284,7 +336,7 @@ export function FilterDropdown() {
                 )}
                 onClick={() => setQuickDate("today")}
               >
-                今天
+                {t("今天")}
               </Button>
               <Button
                 variant={activeQuickDate === "7d" ? "default" : "outline"}
@@ -297,7 +349,7 @@ export function FilterDropdown() {
                 )}
                 onClick={() => setQuickDate("7d")}
               >
-                最近 7 天
+                {t("最近 7 天")}
               </Button>
               <Button
                 variant={activeQuickDate === "30d" ? "default" : "outline"}
@@ -310,7 +362,7 @@ export function FilterDropdown() {
                 )}
                 onClick={() => setQuickDate("30d")}
               >
-                最近 30 天
+                {t("最近 30 天")}
               </Button>
               <Button
                 variant={activeQuickDate === "month" ? "default" : "outline"}
@@ -323,7 +375,7 @@ export function FilterDropdown() {
                 )}
                 onClick={() => setQuickDate("month")}
               >
-                本月
+                {t("本月")}
               </Button>
             </div>
           </div>

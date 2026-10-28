@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#00cd99" />
-    <title>OtterHub 离线中</title>
+    <title>OtterHub Offline</title>
     <style>
       :root {
         color-scheme: dark;
@@ -17,7 +17,11 @@
         display: grid;
         place-items: center;
         background:
-          radial-gradient(circle at top, rgba(0, 205, 153, 0.18), transparent 38%),
+          radial-gradient(
+            circle at top,
+            rgba(0, 205, 153, 0.18),
+            transparent 38%
+          ),
           linear-gradient(180deg, #08141f 0%, #102130 100%);
         color: #effcf7;
       }
@@ -67,9 +71,49 @@
   <body>
     <main>
       <div class="badge">OtterHub · Offline</div>
-      <h1>网络暂时不可用</h1>
-      <p>当前仅保留已缓存的应用壳。文件列表、上传、预览和下载恢复网络后才能继续使用。</p>
-      <a href="/">返回首页</a>
+      <h1 id="heading">You're offline</h1>
+      <p id="message">
+        Reconnect to browse, upload, preview, and download your files.
+      </p>
+      <a id="home" href="/">Back to home</a>
     </main>
+    <script>
+      function updateLanguage() {
+        var preference = "auto";
+        try {
+          preference = localStorage.getItem("otterhub-language") || "auto";
+        } catch {}
+        var languages = navigator.languages || [navigator.language];
+        var language =
+          preference === "zh-CN" || preference === "en" ? preference : "en";
+        if (preference !== "zh-CN" && preference !== "en") {
+          for (var candidate of languages) {
+            if (/^zh(?:-|$)/i.test(candidate)) {
+              language = "zh-CN";
+              break;
+            }
+            if (/^en(?:-|$)/i.test(candidate)) {
+              language = "en";
+              break;
+            }
+          }
+        }
+        var chinese = language === "zh-CN";
+        document.documentElement.lang = language;
+        document.title = chinese ? "OtterHub 离线中" : "OtterHub Offline";
+        document.getElementById("heading").textContent = chinese
+          ? "网络暂时不可用"
+          : "You're offline";
+        document.getElementById("message").textContent = chinese
+          ? "恢复网络后即可继续浏览、上传、预览和下载文件。"
+          : "Reconnect to browse, upload, preview, and download your files.";
+        document.getElementById("home").textContent = chinese
+          ? "返回首页"
+          : "Back to home";
+      }
+      updateLanguage();
+      window.addEventListener("languagechange", updateLanguage);
+      window.addEventListener("storage", updateLanguage);
+    </script>
   </body>
 </html>

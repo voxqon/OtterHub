@@ -1,3 +1,4 @@
+import { t, useLocale } from "@/lib/i18n";
 import { useState, useMemo, useRef } from "react";
 import {
   useActiveSelectedKeys,
@@ -38,6 +39,7 @@ function shouldOpenLargeMediaOnMobile(fileType: FileType, fileSize: number) {
 
 /** 提供文件卡片的选择、查看、下载和编辑等操作。 */
 export function useFileCardActions(file: FileItem) {
+  useLocale();
   const { updateFileMetadata, moveToTrashLocal } = useFileDataStore();
 
   const { toggleSelection } = useFileUIStore();
@@ -68,19 +70,19 @@ export function useFileCardActions(file: FileItem) {
   };
 
   const handleDelete = () => {
-    if (!confirm(`确定删除文件 ${file.metadata?.fileName} ?`)) return;
+    if (!confirm(t("确定删除文件 {0} ?", file.metadata?.fileName))) return;
     moveToTrash(file.name)
       .then(() => {
         moveToTrashLocal(file);
-        toast.success("已移入回收站");
+        toast.success(t("已移入回收站"));
       })
-      .catch(() => toast.error("移入回收站失败"));
+      .catch(() => toast.error(t("移入回收站失败")));
   };
 
   const handleCopyLink = () => {
     const url = getFileUrl(file.name);
     navigator.clipboard.writeText(url);
-    toast.success("文件链接复制成功~");
+    toast.success(t("文件链接复制成功~"));
   };
 
   const handleShare = () => {
@@ -93,21 +95,26 @@ export function useFileCardActions(file: FileItem) {
     const fileSize = file.metadata?.fileSize || 0;
 
     if (shouldOpenLargeMediaOnMobile(fileType, fileSize)) {
-      toast.info("已打开文件链接，请使用浏览器下载");
+      toast.info(t("已打开文件链接，请使用浏览器下载"));
       window.open(getFileUrl(file.name), "_blank", "noopener,noreferrer");
       return;
     }
 
     const toastId =
       fileSize > DIRECT_DOWNLOAD_LIMIT
-        ? toast.loading(`准备下载: ${fileName}`)
+        ? toast.loading(t("准备下载: {0}", fileName))
         : null;
 
     void downloadFile(url, file.metadata, (progress) => {
       if (!toastId) return;
       const message = progress.dirName
-        ? `下载到 ${progress.dirName}: ${fileName} (${progress.percentage}%)`
-        : `下载中: ${fileName} (${progress.percentage}%)`;
+        ? t(
+            "下载到 {0}: {1} ({2}%)",
+            progress.dirName,
+            fileName,
+            progress.percentage
+          )
+        : t("下载中: {0} ({1}%)", fileName, progress.percentage);
       toast.loading(message, { id: toastId });
     })
       .then((result) => {
@@ -117,15 +124,15 @@ export function useFileCardActions(file: FileItem) {
           return;
         }
         const message = result.dirName
-          ? `下载完成: ${fileName}，已保存到 ${result.dirName}`
-          : `下载完成: ${fileName}`;
+          ? t("下载完成: {0}，已保存到 {1}", fileName, result.dirName)
+          : t("下载完成: {0}", fileName);
         toast.success(message, { id: toastId });
       })
       .catch(() => {
         if (toastId) {
-          toast.error(`下载失败: ${fileName}`, { id: toastId });
+          toast.error(t("下载失败: {0}", fileName), { id: toastId });
         } else {
-          toast.error("下载失败");
+          toast.error(t("下载失败"));
         }
       });
   };
@@ -191,7 +198,7 @@ export function useFileCardActions(file: FileItem) {
           liked: !file.metadata.liked,
         });
       })
-      .catch(() => toast.error("收藏操作失败"));
+      .catch(() => toast.error(t("收藏操作失败")));
   };
 
   const handleResumeUpload = () => {
@@ -208,7 +215,7 @@ export function useFileCardActions(file: FileItem) {
       selectedFile.name !== file.metadata?.fileName ||
       selectedFile.size !== file.metadata?.fileSize
     ) {
-      toast.error("文件不匹配");
+      toast.error(t("文件不匹配"));
       return;
     }
 
@@ -237,10 +244,10 @@ export function useFileCardActions(file: FileItem) {
 
       const metadata = await completeChunkUpload(file.name, receipts);
       updateFileMetadata(file.name, metadata);
-      toast.success(`上传成功`);
+      toast.success(t("上传成功"));
     } catch (error) {
       console.error("继续上传失败:", error);
-      toast.error("继续上传失败");
+      toast.error(t("继续上传失败"));
     } finally {
       setIsResuming(false);
     }

@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n/core";
 import { FileItem, FileTag } from "@shared/types";
 
 // 标签展示配置
@@ -12,14 +13,20 @@ export interface TagDisplayConfig {
 export const TAG_CONFIG: Record<FileTag, TagDisplayConfig> = {
   [FileTag.NSFW]: {
     label: "NSFW",
-    description: "敏感内容",
+    get description() {
+      return t("敏感内容");
+    },
     bgColor: "bg-amber-500/20",
     textColor: "text-amber-700 dark:text-amber-300",
     borderColor: "border-amber-500/50",
   },
   [FileTag.Private]: {
-    label: "Private",
-    description: "私有文件",
+    get label() {
+      return t("私有");
+    },
+    get description() {
+      return t("私有文件");
+    },
     bgColor: "bg-purple-500/20",
     textColor: "text-purple-700 dark:text-purple-300",
     borderColor: "border-purple-500/50",
@@ -76,7 +83,7 @@ const NEXT_STATE: Record<
  */
 export function getTagIntent(
   current: BatchTagState,
-  original: BatchTagState,
+  original: BatchTagState
 ): TagIntent {
   if (current === original) return "keep";
   if (current === BatchTagState.All) return "add";
@@ -88,7 +95,7 @@ export function getTagIntent(
  */
 export function calcOriginalTagStates(files: FileItem[]): TagStateMap {
   const states = Object.fromEntries(
-    Object.values(FileTag).map((tag) => [tag, BatchTagState.None]),
+    Object.values(FileTag).map((tag) => [tag, BatchTagState.None])
   ) as TagStateMap;
 
   if (files.length === 0) return states;
@@ -114,7 +121,7 @@ export function calcOriginalTagStates(files: FileItem[]): TagStateMap {
  */
 export function nextTagState(
   current: BatchTagState,
-  original: BatchTagState,
+  original: BatchTagState
 ): BatchTagState {
   const next = NEXT_STATE[original][current];
   return next?.[0] ?? current;
@@ -127,7 +134,7 @@ export function nextTagState(
 export function applyTagStates(
   existing: FileTag[],
   states: TagStateMap,
-  original: TagStateMap,
+  original: TagStateMap
 ): FileTag[] {
   const result = new Set<FileTag>(existing);
 
@@ -147,9 +154,9 @@ export function applyTagStates(
  */
 export function hasAnyTagChange(
   states: TagStateMap,
-  original: TagStateMap,
+  original: TagStateMap
 ): boolean {
   return Object.values(FileTag).some(
-    (tag) => getTagIntent(states[tag], original[tag]) !== "keep",
+    (tag) => getTagIntent(states[tag], original[tag]) !== "keep"
   );
 }

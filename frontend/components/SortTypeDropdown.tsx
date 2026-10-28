@@ -1,13 +1,14 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
-import { 
-  ArrowDownAZ, 
-  ArrowDownWideNarrow, 
+import {
+  ArrowDownAZ,
+  ArrowDownWideNarrow,
   ClockArrowDown,
   ArrowUp,
   ArrowDown,
-  ChevronDown
- } from "lucide-react";
+  ChevronDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,31 +18,39 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import { useFileQueryStore } from "@/stores/file"
+import { useFileQueryStore } from "@/stores/file";
 import { SortType, SortOrder } from "@/lib/types";
 
 const typeOptions = [
-  { 
-    value: SortType.UploadedAt, 
-    label: "上传时间", 
+  {
+    value: SortType.UploadedAt,
+    get label() {
+      return t("上传时间");
+    },
     icon: ClockArrowDown,
   },
-  { 
-    value: SortType.Name, 
-    label: "文件名称", 
+  {
+    value: SortType.Name,
+    get label() {
+      return t("文件名称");
+    },
     icon: ArrowDownAZ,
   },
-  { 
-    value: SortType.FileSize, 
-    label: "文件大小", 
+  {
+    value: SortType.FileSize,
+    get label() {
+      return t("文件大小");
+    },
     icon: ArrowDownWideNarrow,
   },
 ];
 
 export function SortTypeDropdown() {
-  const { sortType, sortOrder, setSortType, setSortOrder } = useFileQueryStore();
+  useLocale();
+  const { sortType, sortOrder, setSortType, setSortOrder } =
+    useFileQueryStore();
 
-  const currentType = typeOptions.find(o => o.value === sortType);
+  const currentType = typeOptions.find((o) => o.value === sortType);
   const OrderIcon = sortOrder === SortOrder.Asc ? ArrowUp : ArrowDown;
   const TypeIcon = currentType?.icon;
 
@@ -77,9 +86,17 @@ export function SortTypeDropdown() {
             <ChevronDown className="h-3.5 w-3.5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40 bg-popover/95 backdrop-blur-xl border-glass-border shadow-xl rounded-xl">
-          <DropdownMenuLabel className="text-xs text-foreground/50">排序字段</DropdownMenuLabel>
-          <DropdownMenuRadioGroup value={sortType} onValueChange={(v) => setSortType(v as SortType)}>
+        <DropdownMenuContent
+          align="end"
+          className="w-40 bg-popover/95 backdrop-blur-xl border-glass-border shadow-xl rounded-xl"
+        >
+          <DropdownMenuLabel className="text-xs text-foreground/50">
+            {t("排序字段")}
+          </DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={sortType}
+            onValueChange={(v) => setSortType(v as SortType)}
+          >
             {typeOptions.map((option) => {
               const Icon = option.icon;
               return (

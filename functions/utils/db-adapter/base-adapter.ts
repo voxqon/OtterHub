@@ -4,6 +4,7 @@ import {
   MAX_CHUNK_SIZE,
   TRASH_EXPIRATION_TTL,
   UploadedChunk,
+  TelegramMessageRef,
   chunkPrefix,
   trashPrefix,
 } from "@shared/types";
@@ -75,7 +76,14 @@ export abstract class BaseAdapter implements DBAdapter {
     parentKey: string,
     chunkIndex: number,
     fileName?: string
-  ): Promise<string | { chunkId: string; thumbUrl?: string }>;
+  ): Promise<
+    | string
+    | {
+        chunkId: string;
+        thumbUrl?: string;
+        telegramMessage?: TelegramMessageRef;
+      }
+  >;
 
   protected getTempChunkId(parentKey: string, chunkIndex: number): string {
     const shortFileId =
@@ -134,6 +142,9 @@ export abstract class BaseAdapter implements DBAdapter {
           ...(typeof result === "string" || !result.thumbUrl
             ? {}
             : { thumbUrl: result.thumbUrl }),
+          ...(typeof result === "string" || !result.telegramMessage
+            ? {}
+            : { telegramMessage: result.telegramMessage }),
         };
         await kv.put(receiptKey, JSON.stringify(chunk), {
           metadata: chunk,

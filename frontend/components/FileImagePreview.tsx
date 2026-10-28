@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { PhotoView } from "react-photo-view";
 import { Image, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
@@ -18,6 +19,7 @@ interface FileImagePreviewProps {
 }
 
 export function PhotoToolbar({ rotate, onRotate, scale, onScale }: any) {
+  useLocale();
   return (
     <div className="flex items-center gap-1">
       <Button
@@ -57,6 +59,7 @@ export function FileImagePreview({
   canPreview,
   iconClassName = "h-16 w-16 text-blue-300",
 }: FileImagePreviewProps) {
+  useLocale();
   const { forceLoadFiles, addForceLoadFile } = useFileUIStore();
   const isLoaded = shouldLoad || forceLoadFiles.includes(fileKey);
 
@@ -79,14 +82,14 @@ export function FileImagePreview({
         e.stopPropagation();
         addForceLoadFile(fileKey);
       }}
-      title="点击加载图片"
+      title={t("点击加载图片")}
     >
       <Image
         className={cn(
           iconClassName,
           "group-hover:opacity-80 transition-opacity"
         )}
-        aria-label="点击加载图片"
+        aria-label={t("点击加载图片")}
       />
     </div>
   );

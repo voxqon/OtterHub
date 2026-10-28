@@ -1,3 +1,6 @@
+"use client";
+
+import { t, useLocale } from "@/lib/i18n";
 import { UnifiedWallpaper } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +22,7 @@ export function WallpaperGridItem({
   onUpload,
   onPreview,
 }: WallpaperGridItemProps) {
+  useLocale();
   return (
     <div
       className="group relative aspect-3/2 rounded-xl overflow-hidden border border-border/50 bg-muted shadow-sm transition-all duration-500 hover:shadow-xl hover:shadow-primary/20 hover:-translate-y-1.5 cursor-zoom-in"
@@ -46,17 +50,15 @@ export function WallpaperGridItem({
           size="icon"
           className={cn(
             "h-8 w-8 rounded-xl backdrop-blur-md text-white border-none shadow-lg active:scale-95 transition-all",
-            isUploaded
-              ? "bg-emerald-500/60"
-              : "bg-black/40 hover:bg-black/60",
+            isUploaded ? "bg-emerald-500/60" : "bg-black/40 hover:bg-black/60"
           )}
           onClick={(e) => onUpload(e, wallpaper)}
           title={
             isUploading
-              ? "上传中"
+              ? t("上传中")
               : isUploaded
-                ? "已保存到云端"
-                : "上传壁纸"
+                ? t("已保存到云端")
+                : t("上传壁纸")
           }
           disabled={isUploading || isUploaded}
         >

@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { LogOut, Settings, Menu, X, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { useFileUIStore } from "@/stores/file";
  * 采用弧形展开动画，提供快捷操作入口，支持拖拽位置持久化
  */
 export function FloatingActionButton() {
+  useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const [isTrashOpen, setIsTrashOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -104,7 +106,7 @@ export function FloatingActionButton() {
   const handleLogout = async () => {
     try {
       await logout();
-      toast.success("登出成功");
+      toast.success(t("登出成功"));
       router.push("/login");
     } catch (error) {
       console.error("Logout failed:", error);
@@ -116,7 +118,7 @@ export function FloatingActionButton() {
     {
       id: "logout",
       icon: <LogOut className="h-5 w-5" />,
-      label: "安全退出",
+      label: t("安全退出"),
       onClick: handleLogout,
       className:
         "bg-destructive/90 text-destructive-foreground hover:bg-destructive shadow-destructive/20",
@@ -124,14 +126,14 @@ export function FloatingActionButton() {
     {
       id: "settings",
       icon: <Settings className="h-5 w-5" />,
-      label: "系统设置",
+      label: t("系统设置"),
       onClick: () => setIsSettingsOpen(true),
       className: "bg-sky-400/90 text-white hover:bg-sky-500 shadow-sky-400/20",
     },
     {
       id: "trash",
       icon: <Trash2 className="h-5 w-5" />,
-      label: "回收站",
+      label: t("回收站"),
       onClick: () => setIsTrashOpen(true),
       className:
         "bg-indigo-400/90 text-white hover:bg-indigo-500 shadow-indigo-400/20",
@@ -193,6 +195,8 @@ export function FloatingActionButton() {
 
                   <Button
                     size="icon"
+                    aria-label={action.label}
+                    tabIndex={isOpen ? 0 : -1}
                     onClick={() => {
                       if (action.onClick) action.onClick();
                       setIsOpen(false);
@@ -212,6 +216,8 @@ export function FloatingActionButton() {
           {/* 主按钮 */}
           <Button
             size="icon"
+            aria-label={isOpen ? t("关闭菜单") : t("打开菜单")}
+            aria-expanded={isOpen}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}

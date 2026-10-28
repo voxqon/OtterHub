@@ -106,7 +106,12 @@ export async function finalizeUpload(
   await kv.put(
     key,
     JSON.stringify(
-      sorted.map(({ idx, file_id, size }) => ({ idx, file_id, size }))
+      sorted.map(({ idx, file_id, size, telegramMessage }) => ({
+        idx,
+        file_id,
+        size,
+        ...(telegramMessage ? { telegramMessage } : {}),
+      }))
     ),
     {
       metadata: completedMetadata,

@@ -10,15 +10,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useFileDataStore } from "@/stores/file";
 import { FileType } from "@shared/types";
+import { t, useLocale } from "@/lib/i18n";
 
 const fileTypes = [
-  { id: FileType.Image, label: "Images", icon: ImageIcon },
-  { id: FileType.Audio, label: "Audio", icon: Music },
-  { id: FileType.Video, label: "Videos", icon: Video },
-  { id: FileType.Document, label: "Documents", icon: FileText },
+  { id: FileType.Image, label: "图片", icon: ImageIcon },
+  { id: FileType.Audio, label: "音频", icon: Music },
+  { id: FileType.Video, label: "视频", icon: Video },
+  { id: FileType.Document, label: "文档", icon: FileText },
 ];
 
 export function FileTypeDropdown() {
+  useLocale();
   const activeType = useFileDataStore((s) => s.activeType);
   const setActiveType = useFileDataStore((s) => s.setActiveType);
 
@@ -41,7 +43,7 @@ export function FileTypeDropdown() {
           {currentType?.icon && (
             <currentType.icon className="text-foreground/80 h-4 w-4" />
           )}
-          {currentType?.label}
+          {currentType && t(currentType.label)}
           <ChevronDown className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -84,7 +86,7 @@ export function FileTypeDropdown() {
               `}
             >
               <Icon className="h-4 w-4 mr-2 text-foreground/60" />
-              {type.label}
+              {t(type.label)}
             </DropdownMenuItem>
           );
         })}

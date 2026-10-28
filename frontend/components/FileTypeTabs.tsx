@@ -5,15 +5,17 @@ import { Button } from "@/components/ui/button";
 
 import { FileType } from "@shared/types";
 import { useFileDataStore } from "@/stores/file";
+import { t, useLocale } from "@/lib/i18n";
 
 const fileTypes = [
-  { id: FileType.Image, label: "Images", icon: ImageIcon },
-  { id: FileType.Audio, label: "Audio", icon: Music },
-  { id: FileType.Video, label: "Videos", icon: Video },
-  { id: FileType.Document, label: "Documents", icon: FileText },
+  { id: FileType.Image, label: "图片", icon: ImageIcon },
+  { id: FileType.Audio, label: "音频", icon: Music },
+  { id: FileType.Video, label: "视频", icon: Video },
+  { id: FileType.Document, label: "文档", icon: FileText },
 ];
 
 export function FileTypeTabs() {
+  useLocale();
   const activeType = useFileDataStore((s) => s.activeType);
   const setActiveType = useFileDataStore((s) => s.setActiveType);
 
@@ -38,8 +40,12 @@ export function FileTypeTabs() {
               }
             `}
           >
-            {Icon && <Icon className={`h-3.5 w-3.5 mr-1.5 transition-transform duration-200 ${isActive ? "scale-110" : ""}`} />}
-            {type.label}
+            {Icon && (
+              <Icon
+                className={`h-3.5 w-3.5 mr-1.5 transition-transform duration-200 ${isActive ? "scale-110" : ""}`}
+              />
+            )}
+            {t(type.label)}
           </Button>
         );
       })}

@@ -1,5 +1,10 @@
 import { Hono } from "hono";
-import { FileMetadata, MAX_CHUNK_SIZE } from "@shared/types";
+import {
+  FileMetadata,
+  MAX_CHUNK_SIZE,
+  TRASH_EXPIRATION_TTL,
+  trashPrefix,
+} from "@shared/types";
 import type { Env } from "../../types/hono";
 import { authMiddleware } from "../../middleware/auth";
 import { buildKeyId } from "@utils/file";
@@ -62,6 +67,13 @@ telegramWebhookRoutes.post("/webhook", async (c) => {
   const origin = new URL(c.req.url).origin;
   const directLink = buildTelegramDirectLink(origin, key);
   const chatId = message?.chat?.id;
+  if (
+    chatId === undefined ||
+    !Number.isSafeInteger(message.message_id) ||
+    message.message_id <= 0
+  ) {
+    return fail(c, "Invalid Telegram message reference", 400);
+  }
   const shouldNotify = Boolean(chatId);
 
   if (media.fileSize > MAX_CHUNK_SIZE) {
@@ -74,8 +86,41 @@ telegramWebhookRoutes.post("/webhook", async (c) => {
     });
   }
 
-  const existing = await c.env.oh_file_url.getWithMetadata<FileMetadata>(key);
+  const trashKey = `${trashPrefix}${key}`;
+  const active = await c.env.oh_file_url.getWithMetadata<FileMetadata>(key);
+  const trashed = active.metadata
+    ? null
+    : await c.env.oh_file_url.getWithMetadata<FileMetadata>(trashKey);
+  const existing = active.metadata ? active : (trashed ?? active);
+  const recordKey = active.metadata ? key : trashed?.metadata ? trashKey : key;
+  const trashRecord =
+    recordKey === trashKey
+      ? (
+          await c.env.oh_file_url.list({ prefix: trashKey, limit: 1 })
+        ).keys.find((record: { name: string }) => record.name === trashKey)
+      : null;
+  const recordOptions =
+    recordKey === trashKey
+      ? trashRecord?.expiration
+        ? { expiration: trashRecord.expiration }
+        : { expirationTtl: TRASH_EXPIRATION_TTL }
+      : {};
+  const messageRef = {
+    chatId,
+    messageId: media.messageId || message.message_id,
+  };
   if (existing.metadata) {
+    const messages = existing.metadata.telegramMessages ?? [];
+    const isDuplicateUpdate = messages.some(
+      (ref) => ref.chatId === chatId && ref.messageId === messageRef.messageId
+    );
+    if (isDuplicateUpdate)
+      return ok(c, { key, url: directLink, existed: true });
+    existing.metadata.telegramMessages = [...messages, messageRef];
+    await c.env.oh_file_url.put(recordKey, existing.value ?? "", {
+      metadata: existing.metadata,
+      ...recordOptions,
+    });
     if (shouldNotify) {
       const noticeResult = await sendTelegramUploadNotice(c.env.TG_BOT_TOKEN, {
         chatId,
@@ -86,7 +131,18 @@ telegramWebhookRoutes.post("/webhook", async (c) => {
         fileName: media.fileName,
         fileSize: media.fileSize,
         text: `[OtterHub]\n文件已存在：${directLink}`,
+        apiBaseUrl: c.env.TG_API_BASE_URL,
       });
+      if (noticeResult.ok && noticeResult.data?.result?.message_id) {
+        existing.metadata.telegramMessages.push({
+          chatId,
+          messageId: noticeResult.data.result.message_id,
+        });
+        await c.env.oh_file_url.put(recordKey, existing.value ?? "", {
+          metadata: existing.metadata,
+          ...recordOptions,
+        });
+      }
 
       if (!noticeResult.ok && !noticeResult.skipped) {
         console.warn(
@@ -110,6 +166,7 @@ telegramWebhookRoutes.post("/webhook", async (c) => {
     fileSize: media.fileSize,
     uploadedAt: Date.now(),
     liked: false,
+    telegramMessages: [messageRef],
     thumbUrl: media.previewFileId
       ? `/file/${media.previewFileId}/thumb`
       : undefined,
@@ -126,7 +183,15 @@ telegramWebhookRoutes.post("/webhook", async (c) => {
       messageId: media.messageId || message.message_id,
       fileName: media.fileName,
       fileSize: media.fileSize,
+      apiBaseUrl: c.env.TG_API_BASE_URL,
     });
+    if (noticeResult.ok && noticeResult.data?.result?.message_id) {
+      metadata.telegramMessages!.push({
+        chatId,
+        messageId: noticeResult.data.result.message_id,
+      });
+      await c.env.oh_file_url.put(key, "", { metadata });
+    }
 
     if (!noticeResult.ok && !noticeResult.skipped) {
       console.warn(

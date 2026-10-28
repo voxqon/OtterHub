@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { Shield, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useGeneralSettingsStoreClient } from "@/stores/general-store";
 
 export function SafeModeToggle() {
+  useLocale();
   const store = useGeneralSettingsStoreClient();
 
   // store 为 null 表示 SSR 阶段，渲染骨架占位
@@ -53,7 +55,9 @@ export function SafeModeToggle() {
         </TooltipTrigger>
         <TooltipContent>
           <p>
-            {safeMode ? "安全模式开启 · NSFW 遮罩" : "安全模式关闭 · 显示全部"}
+            {safeMode
+              ? t("安全模式开启 · NSFW 遮罩")
+              : t("安全模式关闭 · 显示全部")}
           </p>
         </TooltipContent>
       </Tooltip>

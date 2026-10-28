@@ -1,6 +1,10 @@
+"use client";
+
+import { t, useLocale } from "@/lib/i18n";
 import { UploadCloud, Sparkles } from "lucide-react";
 
 export function EmptyState() {
+  useLocale();
   return (
     <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
       <div className="relative mb-6">
@@ -13,15 +17,17 @@ export function EmptyState() {
       </div>
 
       <h3 className="text-xl font-bold text-foreground mb-2 tracking-tight">
-        暂无任何文件
+        {t("暂无任何文件")}
       </h3>
       <p className="text-foreground/60 max-w-sm mb-6 text-sm leading-relaxed">
-        将文件拖放到上方的上传区域，或直接点击浏览，开启你的个人资源知识库。
+        {t(
+          "将文件拖放到上方的上传区域，或直接点击浏览，开启你的个人资源知识库。"
+        )}
       </p>
 
       <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-secondary/40 border border-glass-border text-xs text-foreground/70">
         <UploadCloud className="h-3.5 w-3.5 text-primary" />
-        <span>支持图片、音频、视频与各类文档</span>
+        <span>{t("支持图片、音频、视频与各类文档")}</span>
       </div>
     </div>
   );

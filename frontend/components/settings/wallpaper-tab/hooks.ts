@@ -1,3 +1,4 @@
+import { t, useLocale } from "@/lib/i18n";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -12,6 +13,7 @@ import { useWallpaperSessionStore } from "@/stores/wallpaper-session-store";
  * 数据源与配置管理 Hook
  */
 export function useWallpaperSources() {
+  useLocale();
   const {
     activeSourceId,
     setActiveSourceId,
@@ -53,6 +55,7 @@ export function useWallpaperSources() {
  * 壁纸数据存储在 sessionStorage 中，切换 tab 不会丢失。
  */
 export function useWallpaperList(activeSource: WallpaperProvider, config: any) {
+  useLocale();
   const wallpapers = useWallpaperSessionStore((s) => s.wallpapers);
   const currentPage = useWallpaperSessionStore((s) => s.currentPage);
   const minPage = useWallpaperSessionStore((s) => s.minPage);
@@ -82,7 +85,7 @@ export function useWallpaperList(activeSource: WallpaperProvider, config: any) {
       });
 
       if (data.length === 0) {
-        toast.info("未找到更多壁纸");
+        toast.info(t("未找到更多壁纸"));
       } else {
         setWallpapers((prev) => {
           const existingKeys = new Set(
@@ -95,12 +98,17 @@ export function useWallpaperList(activeSource: WallpaperProvider, config: any) {
         });
         setCurrentPage(1);
         toast.success(
-          `${activeSource.name}: 新增 ${data.length} 张壁纸 (第 ${randomPage} 页)`
+          t(
+            "{0}: 新增 {1} 张壁纸 (第 {2} 页)",
+            activeSource.name,
+            data.length,
+            randomPage
+          )
         );
       }
     } catch (error: any) {
       if (error.message !== "API_KEY_MISSING") {
-        toast.error(error.message || "获取失败");
+        toast.error(error.message || t("获取失败"));
       }
       throw error;
     } finally {

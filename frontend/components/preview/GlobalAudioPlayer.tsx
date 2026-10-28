@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import React, { useEffect, useRef, useState } from "react";
 import { usePreviewStore } from "@/stores/preview-store";
@@ -9,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { DraggablePreviewBookmark } from "./DraggablePreviewBookmark";
 
 export function GlobalAudioPlayer() {
+  useLocale();
   const { audio, video, text, minimize, maximize, close } = usePreviewStore();
   const activeFile = audio?.file;
   const viewState = audio?.viewState;
@@ -77,7 +79,7 @@ export function GlobalAudioPlayer() {
               variant="ghost"
               size="icon"
               onClick={() => minimize("audio")}
-              title="最小化"
+              title={t("最小化")}
             >
               <Minus className="h-4 w-4" />
             </Button>
@@ -85,7 +87,7 @@ export function GlobalAudioPlayer() {
               variant="ghost"
               size="icon"
               onClick={() => close("audio")}
-              title="关闭"
+              title={t("关闭")}
             >
               <X className="h-4 w-4" />
             </Button>

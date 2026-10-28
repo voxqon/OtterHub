@@ -4,6 +4,7 @@ import { FileTag } from "@shared/types";
 import { TAG_CONFIG } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { Tag, AlertTriangle, Lock, X } from "lucide-react";
+import { useLocale } from "@/lib/i18n";
 
 interface FileTagBadgeProps {
   tag: string | FileTag;
@@ -26,6 +27,7 @@ export function FileTagBadge({
   forceDark = false,
   onRemove,
 }: FileTagBadgeProps) {
+  useLocale();
   const config = TAG_CONFIG[tag as FileTag];
   const IconComponent = TAG_ICONS[tag] || Tag;
 
@@ -34,7 +36,7 @@ export function FileTagBadge({
     const badge = (
       <span
         className={cn(
-          "inline-flex items-center gap-1 px-1.5 py-1 text-xs bg-secondary/30 text-foreground/80 rounded border border-glass-border",
+          "inline-flex items-center gap-1 px-1.5 py-1 text-xs bg-secondary/30 text-foreground/80 rounded border border-glass-border"
         )}
       >
         <IconComponent className="h-3 w-3" />
@@ -66,7 +68,7 @@ export function FileTagBadge({
         "inline-flex items-center gap-1 px-1.5 py-1 text-xs rounded border transition-colors",
         config.bgColor,
         config.textColor,
-        config.borderColor,
+        config.borderColor
       )}
       title={config.description}
     >

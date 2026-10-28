@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n/core";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useSyncExternalStore } from "react";
@@ -74,7 +75,7 @@ export const useGeneralSettingsStore = create<GeneralStoreState>()(
               defaultUploadTags: settings.defaultUploadTags || [],
               enableImageAnalysis: settings.enableImageAnalysis !== false,
             });
-            toast.success("已从云端恢复数据");
+            toast.success(t("已从云端恢复数据"));
           }
         } catch (error) {
           console.error("Failed to fetch general settings", error);
@@ -100,7 +101,7 @@ export const useGeneralSettingsStore = create<GeneralStoreState>()(
             enableImageAnalysis,
           });
           if (!options?.silent) {
-            toast.success("设置已保存到云端");
+            toast.success(t("设置已保存到云端"));
           }
         } catch (error) {
           console.error("Failed to sync general settings", error);

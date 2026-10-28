@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { Search, X, Settings2 } from "lucide-react";
 import { useFileQueryStore } from "@/stores/file";
@@ -21,6 +22,7 @@ import {
 import { APP_NAME } from "@/lib/ui-text";
 
 export function Header() {
+  useLocale();
   const { searchQuery, setSearchQuery } = useFileQueryStore();
   const isMobile = useIsMobile();
   const [showMobileSearch, setShowMobileSearch] = useState(false);
@@ -36,7 +38,7 @@ export function Header() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/40" />
                 <Input
                   autoFocus
-                  placeholder="搜索文件..."
+                  placeholder={t("搜索文件...")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="h-11 w-full pl-10 pr-10 bg-secondary/30 border-glass-border rounded-2xl focus-visible:ring-primary/40 placeholder:text-foreground/50 text-base"
@@ -60,7 +62,7 @@ export function Header() {
                 }}
                 className="text-base font-semibold text-primary"
               >
-                取消
+                {t("取消")}
               </Button>
             </div>
           ) : (
@@ -103,17 +105,17 @@ export function Header() {
                         <div className="p-2 rounded-lg bg-primary/10">
                           <Settings2 className="h-5 w-5 text-primary" />
                         </div>
-                        偏好设置
+                        {t("偏好设置")}
                       </SheetTitle>
                     </SheetHeader>
                     <div className="space-y-8">
                       <div className="flex items-center justify-between">
                         <div className="space-y-1">
                           <p className="text-base font-semibold text-foreground">
-                            安全模式
+                            {t("安全模式")}
                           </p>
                           <p className="text-xs text-foreground/50">
-                            遮罩敏感内容 (NSFW)
+                            {t("遮罩敏感内容 (NSFW)")}
                           </p>
                         </div>
                         <SafeModeToggle />
@@ -121,10 +123,10 @@ export function Header() {
                       <div className="flex items-center justify-between">
                         <div className="space-y-1">
                           <p className="text-base font-semibold text-foreground">
-                            图片加载
+                            {t("图片加载")}
                           </p>
                           <p className="text-xs text-foreground/50">
-                            根据网络自动调整质量
+                            {t("根据网络自动调整质量")}
                           </p>
                         </div>
                         <ImageLoadModeToggle />
@@ -132,10 +134,10 @@ export function Header() {
                       <div className="flex items-center justify-between">
                         <div className="space-y-1">
                           <p className="text-base font-semibold text-foreground">
-                            深色模式
+                            {t("深色模式")}
                           </p>
                           <p className="text-xs text-foreground/50">
-                            随系统自动切换主题
+                            {t("随系统自动切换主题")}
                           </p>
                         </div>
                         <ThemeToggle />
@@ -158,7 +160,7 @@ export function Header() {
         {/* Left: Logo */}
         <div
           className="flex items-center gap-3.5 group cursor-pointer shrink-0 select-none"
-          title="返回顶部"
+          title={t("返回顶部")}
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
           <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-linear-to-tr from-primary via-emerald-400 to-teal-300 text-2xl shadow-md shadow-primary/25 transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/40 group-active:scale-95">
@@ -181,7 +183,7 @@ export function Header() {
           <div className="relative group hidden lg:block">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/40 group-focus-within:text-primary transition-colors" />
             <Input
-              placeholder="搜索文件..."
+              placeholder={t("搜索文件...")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-9.5 w-56 rounded-xl border-glass-border bg-secondary/35 pl-9.5 pr-9 text-sm focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:bg-secondary/60 placeholder:text-foreground/45 transition-all duration-200"

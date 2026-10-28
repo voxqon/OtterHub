@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useState } from "react";
 import { Key, Save, ExternalLink, Eye, EyeOff } from "lucide-react";
@@ -31,6 +32,7 @@ export function ApiKeyDialog({
   currentApiKey,
   onSave,
 }: ApiKeyDialogProps) {
+  useLocale();
   const [key, setKey] = useState(currentApiKey);
   const [showKey, setShowKey] = useState(false);
 
@@ -49,9 +51,10 @@ export function ApiKeyDialog({
   };
 
   const getHelpUrl = (sourceId: WallpaperSourceId) => {
-    if (sourceId === 'pixabay') return "https://pixabay.com/api/docs/";
-    if (sourceId === 'wallhaven') return "https://wallhaven.cc/settings/account";
-    if (sourceId === 'unsplash') return "https://unsplash.com/developers";
+    if (sourceId === "pixabay") return "https://pixabay.com/api/docs/";
+    if (sourceId === "wallhaven")
+      return "https://wallhaven.cc/settings/account";
+    if (sourceId === "unsplash") return "https://unsplash.com/developers";
     return "";
   };
 
@@ -72,7 +75,10 @@ export function ApiKeyDialog({
 
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="api-key" className="text-xs font-bold uppercase opacity-60">
+            <Label
+              htmlFor="api-key"
+              className="text-xs font-bold uppercase opacity-60"
+            >
               API Key
             </Label>
             <div className="relative">
@@ -81,7 +87,7 @@ export function ApiKeyDialog({
                 type={showKey ? "text" : "password"}
                 value={key}
                 onChange={(e) => setKey(e.target.value)}
-                placeholder={`输入您的 ${source.name} API Key`}
+                placeholder={t("输入您的 {0} API Key", source.name)}
                 className="pr-10 bg-muted/30 border-border/50"
               />
               <button
@@ -89,7 +95,11 @@ export function ApiKeyDialog({
                 onClick={() => setShowKey(!showKey)}
                 className="absolute right-3 top-2.5 h-4 w-4 opacity-40 hover:opacity-80 transition-opacity"
               >
-                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showKey ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </button>
             </div>
           </div>
@@ -101,18 +111,22 @@ export function ApiKeyDialog({
               rel="noopener noreferrer"
               className="text-[10px] text-primary hover:underline flex items-center gap-1 w-fit"
             >
-              获取 API Key <ExternalLink className="h-3 w-3" />
+              {t("获取 API Key")} <ExternalLink className="h-3 w-3" />
             </a>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="text-xs">
-            取消
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            className="text-xs"
+          >
+            {t("取消")}
           </Button>
           <Button onClick={handleSave} className="gap-2 text-xs">
             <Save className="h-3.5 w-3.5" />
-            保存配置
+            {t("保存配置")}
           </Button>
         </DialogFooter>
       </DialogContent>

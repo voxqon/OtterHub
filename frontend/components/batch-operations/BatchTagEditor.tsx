@@ -1,9 +1,15 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { Check, Minus, Tag } from "lucide-react";
 import { FileTag } from "@shared/types";
 import { cn } from "@/lib/utils";
-import { BatchTagState, TagStateMap, getTagIntent, TAG_CONFIG } from "@/lib/utils";
+import {
+  BatchTagState,
+  TagStateMap,
+  getTagIntent,
+  TAG_CONFIG,
+} from "@/lib/utils";
 
 interface BatchTagEditorProps {
   currentStates: TagStateMap;
@@ -18,10 +24,10 @@ export function BatchTagEditor({
   onToggle,
   disabled = false,
 }: BatchTagEditorProps) {
+  useLocale();
   return (
     <div className="space-y-2">
       <div className="p-4 rounded-lg bg-secondary/30 border border-glass-border space-y-3">
-
         <div className="space-y-2">
           {Object.values(FileTag).map((tag) => {
             const config = TAG_CONFIG[tag as FileTag];
@@ -53,9 +59,17 @@ export function BatchTagEditor({
               const intent = getTagIntent(current, original);
 
               const statusText = {
-                keep: <span className="text-xs text-amber-500">保持不变</span>,
-                add: <span className="text-xs text-primary">将添加</span>,
-                remove: <span className="text-xs text-red-500">将移除</span>,
+                keep: (
+                  <span className="text-xs text-amber-500">
+                    {t("保持不变")}
+                  </span>
+                ),
+                add: (
+                  <span className="text-xs text-primary">{t("将添加")}</span>
+                ),
+                remove: (
+                  <span className="text-xs text-red-500">{t("将移除")}</span>
+                ),
               }[intent];
 
               return statusText;
@@ -70,7 +84,7 @@ export function BatchTagEditor({
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:bg-secondary/50",
                   config?.bgColor || "bg-secondary/30",
-                  config?.borderColor || "border-glass-border",
+                  config?.borderColor || "border-glass-border"
                 )}
               >
                 <div className="relative">
@@ -84,7 +98,7 @@ export function BatchTagEditor({
                   <div
                     className={cn(
                       "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
-                      getCheckboxStyle(),
+                      getCheckboxStyle()
                     )}
                   >
                     {getIcon()}
@@ -96,13 +110,13 @@ export function BatchTagEditor({
                     <Tag
                       className={cn(
                         "h-4 w-4",
-                        config?.textColor || "text-foreground/60",
+                        config?.textColor || "text-foreground/60"
                       )}
                     />
                     <span
                       className={cn(
                         "text-sm font-medium",
-                        config?.textColor || "text-foreground/80",
+                        config?.textColor || "text-foreground/80"
                       )}
                     >
                       {config?.label || tag}
@@ -115,7 +129,7 @@ export function BatchTagEditor({
                       className={cn(
                         "text-xs px-2 py-0.5 rounded",
                         config?.bgColor || "bg-secondary/30",
-                        config?.textColor || "text-foreground/60",
+                        config?.textColor || "text-foreground/60"
                       )}
                     >
                       {config?.description || ""}

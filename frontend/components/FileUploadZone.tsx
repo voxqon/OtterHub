@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useCallback, useRef, useState } from "react";
 import { Upload } from "lucide-react";
@@ -32,6 +33,7 @@ import { useGeneralSettingsStore } from "@/stores/general-store";
 import { MAX_CONCURRENTS } from "@/lib/types";
 
 export function FileUploadZone() {
+  useLocale();
   const addFileLocal = useFileDataStore((s) => s.addFileLocal);
   const { nsfwDetection, defaultUploadTags } = useGeneralSettingsStore();
   const [isDragging, setIsDragging] = useState(false);
@@ -127,7 +129,7 @@ export function FileUploadZone() {
       /** 分片上传 */
       const uploadChunkedFile = async (file: File) => {
         if (file.size > MAX_FILE_SIZE) {
-          toast.warning(`文件大小超过 ${formatFileSize(MAX_FILE_SIZE)}`);
+          toast.warning(t("文件大小超过 {0}", formatFileSize(MAX_FILE_SIZE)));
           return;
         }
 
@@ -241,11 +243,11 @@ export function FileUploadZone() {
       );
 
       if (successCount > 0) {
-        toast.success(`成功上传 ${successCount} 个文件`);
+        toast.success(t("成功上传 {0} 个文件", successCount));
       }
 
       if (failed.length) {
-        toast.error(`${failed.length}个文件上传失败`, {
+        toast.error(t("{0}个文件上传失败", failed.length), {
           description: failed.join(", "),
         });
       }
@@ -304,16 +306,18 @@ export function FileUploadZone() {
           <p
             className={cn(
               "text-sm font-medium transition-colors mb-1",
-              isDragging ? "text-primary" : "text-foreground/80 group-hover:text-foreground"
+              isDragging
+                ? "text-primary"
+                : "text-foreground/80 group-hover:text-foreground"
             )}
           >
             {isDragging
-              ? "松开鼠标即可极速上传"
-              : "拖拽文件到此处，或点击浏览本地文件"}
+              ? t("松开鼠标即可极速上传")
+              : t("拖拽文件到此处，或点击浏览本地文件")}
           </p>
 
           <p className="text-xs text-foreground/45 transition-colors">
-            支持图片、音频、视频及文档，多文件与大文件自动分片上传
+            {t("支持图片、音频、视频及文档，多文件与大文件自动分片上传")}
           </p>
         </div>
 
@@ -336,11 +340,16 @@ export function FileUploadZone() {
               <div className="flex justify-between items-center text-xs mb-1.5 text-foreground/80 font-medium">
                 <span className="flex items-center gap-1.5">
                   <span className="inline-block w-2 h-2 rounded-full bg-primary animate-ping" />
-                  上传中...
+                  {t("上传中...")}
                 </span>
-                <span className="font-mono text-primary font-semibold">{v}%</span>
+                <span className="font-mono text-primary font-semibold">
+                  {v}%
+                </span>
               </div>
-              <Progress value={v} className="h-1.5 bg-secondary/60 rounded-full" />
+              <Progress
+                value={v}
+                className="h-1.5 bg-secondary/60 rounded-full"
+              />
             </div>
           ))}
         </div>

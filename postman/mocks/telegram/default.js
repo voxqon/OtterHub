@@ -7,13 +7,18 @@ http
     const state = (await pm.state.get("telegram:state")) || {
       calls: [],
       uploads: 0,
+      deleted: [],
     };
     const json = (status, body) => {
       res.writeHead(status, { "Content-Type": "application/json" });
       res.end(JSON.stringify(body));
     };
     if (url.pathname === "/__reset") {
-      await pm.state.set("telegram:state", { calls: [], uploads: 0 });
+      await pm.state.set("telegram:state", {
+        calls: [],
+        uploads: 0,
+        deleted: [],
+      });
       return json(200, { ok: true });
     }
     if (url.pathname === "/__stats") return json(200, state);
@@ -26,6 +31,78 @@ http
       (call) => call.path === url.pathname
     ).length;
     await pm.state.set("telegram:state", state);
+
+    const deletion = /^\/bot([^/]+)\/deleteMessage$/.exec(url.pathname);
+    const notice = /^\/bot([^/]+)\/sendMessage$/.exec(url.pathname);
+    if ((deletion || notice) && req.method === "POST") {
+      let payload;
+      try {
+        payload =
+          typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+        if (!payload) throw new Error("Missing JSON body");
+      } catch {
+        return json(400, {
+          ok: false,
+          description: "Bad Request: invalid JSON",
+        });
+      }
+      state.calls[state.calls.length - 1].body = payload;
+      await pm.state.set("telegram:state", state);
+      if (notice) {
+        state.uploads++;
+        await pm.state.set("telegram:state", state);
+        return json(200, {
+          ok: true,
+          result: {
+            message_id: 1000 + state.uploads,
+            chat: { id: payload.chat_id },
+          },
+        });
+      }
+      if (
+        !payload.chat_id ||
+        !Number.isInteger(payload.message_id) ||
+        payload.message_id < 1
+      ) {
+        return json(400, {
+          ok: false,
+          description: "Bad Request: invalid message reference",
+        });
+      }
+      const token = deletion[1];
+      if (token === "nodelete")
+        return json(403, {
+          ok: false,
+          description: "Forbidden: not enough rights",
+        });
+      if (token === "expired")
+        return json(400, {
+          ok: false,
+          description: "Bad Request: message can't be deleted",
+        });
+      if (
+        token === "partial" &&
+        payload.message_id === 2 &&
+        state.calls.filter(
+          (call) => call.path === url.pathname && call.body?.message_id === 2
+        ).length === 1
+      ) {
+        return json(429, {
+          ok: false,
+          description: "Too Many Requests",
+          parameters: { retry_after: 1 },
+        });
+      }
+      const id = `${payload.chat_id}:${payload.message_id}`;
+      if (token === "missing" || state.deleted.includes(id))
+        return json(400, {
+          ok: false,
+          description: "Bad Request: message to delete not found",
+        });
+      state.deleted.push(id);
+      await pm.state.set("telegram:state", state);
+      return json(200, { ok: true, result: true });
+    }
 
     const upload = /^\/bot([^/]+)\/sendDocument$/.exec(url.pathname);
     if (upload && req.method === "POST") {
@@ -57,7 +134,14 @@ http
         ok: true,
         result: {
           message_id: state.uploads,
-          document: { file_id: `uploaded-${state.uploads}`, file_size: 4 },
+          chat: { id: "test-chat" },
+          document: {
+            file_id:
+              token === "duplicate"
+                ? "uploaded-shared"
+                : `uploaded-${state.uploads}`,
+            file_size: 4,
+          },
         },
       });
     }

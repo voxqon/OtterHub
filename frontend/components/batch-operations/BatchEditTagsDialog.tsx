@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useState, useMemo, useEffect } from "react";
 import { FileTag, FileItem } from "@shared/types";
@@ -14,7 +15,14 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, Tag, Info } from "lucide-react";
 import { BatchTagEditor } from "./BatchTagEditor";
-import { applyTagStates, calcOriginalTagStates, hasAnyTagChange, nextTagState, TagStateMap, processBatch } from "@/lib/utils";
+import {
+  applyTagStates,
+  calcOriginalTagStates,
+  hasAnyTagChange,
+  nextTagState,
+  TagStateMap,
+  processBatch,
+} from "@/lib/utils";
 
 interface BatchAddTagsDialogProps {
   files: FileItem[];
@@ -29,6 +37,7 @@ export function BatchEditTagsDialog({
   onOpenChange,
   onSuccess,
 }: BatchAddTagsDialogProps) {
+  useLocale();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
@@ -59,11 +68,11 @@ export function BatchEditTagsDialog({
 
     // 如果没有任何变化，直接退出
     if (!hasAnyTagChange(currentStates, originalStates)) {
-      toast.info("没有标签变更");
+      toast.info(t("没有标签变更"));
       onOpenChange(false);
       return;
     }
-  
+
     setIsSubmitting(true);
 
     try {
@@ -76,7 +85,7 @@ export function BatchEditTagsDialog({
           const newTags = applyTagStates(
             file.metadata?.tags ?? [],
             currentStates,
-            originalStates,
+            originalStates
           );
 
           await editMetadata(file.name, { tags: newTags });
@@ -87,17 +96,17 @@ export function BatchEditTagsDialog({
           });
         },
         (current, total) => setProgress({ current, total }),
-        10,
+        10
       );
 
-      toast.success(`成功更新 ${files.length} 个文件的标签`);
+      toast.success(t("成功更新 {0} 个文件的标签", files.length));
 
       onOpenChange(false);
       onSuccess?.(updatedFiles);
     } catch (error) {
       console.error("Error updating tags:", error);
-      toast.error("更新标签失败", {
-        description: error instanceof Error ? error.message : "未知错误",
+      toast.error(t("更新标签失败"), {
+        description: error instanceof Error ? error.message : t("未知错误"),
       });
     } finally {
       setIsSubmitting(false);
@@ -116,7 +125,7 @@ export function BatchEditTagsDialog({
         <DialogHeader>
           <DialogTitle className="text-foreground flex items-center gap-2">
             <Tag className="h-5 w-5 text-primary" />
-            批量编辑标签
+            {t("批量编辑标签")}
           </DialogTitle>
         </DialogHeader>
 
@@ -125,11 +134,7 @@ export function BatchEditTagsDialog({
           <div className="p-3 rounded-lg bg-secondary/30 border border-glass-border">
             <p className="text-sm text-foreground/60 flex items-center gap-2">
               <Info className="h-4 w-4 text-primary" />
-              已选中{" "}
-              <span className="font-bold text-primary">
-                {files.length}
-              </span>{" "}
-              个文件
+              <span>{t("已选中 {0} 个文件", files.length)}</span>
             </p>
           </div>
 
@@ -149,7 +154,7 @@ export function BatchEditTagsDialog({
               disabled={isSubmitting}
               className="border-glass-border text-foreground hover:bg-secondary/50"
             >
-              取消
+              {t("取消")}
             </Button>
             <Button
               type="submit"
@@ -160,11 +165,11 @@ export function BatchEditTagsDialog({
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   {progress.total > 0
-                    ? `更新中 ${progress.current}/${progress.total}`
-                    : "更新中..."}
+                    ? t("更新中 {0}/{1}", progress.current, progress.total)
+                    : t("更新中...")}
                 </>
               ) : (
-                "更新标签"
+                t("更新标签")
               )}
             </Button>
           </DialogFooter>

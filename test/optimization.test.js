@@ -822,6 +822,13 @@ describe("Optimization regressions", function () {
         });
         assert.equal(completed.status, 200);
         assert.deepEqual((await completed.json()).data.tags, ["private"]);
+        const manifest = JSON.parse(
+          (await env.oh_file_url.getWithMetadata(key)).value
+        );
+        assert.deepEqual(manifest[0].telegramMessage, {
+          chatId: "test-chat",
+          messageId: 1,
+        });
         assert.equal((await stats()).uploads, 1);
         assert.equal(
           env.oh_file_url.writes.filter((name) => name === key).length,
@@ -909,6 +916,252 @@ describe("Optimization regressions", function () {
           after.calls.filter((call) => call.path === "/botok/getFile").length,
           1
         );
+      });
+
+      it("deletes an uploaded file's chat message before removing its trash record", async () => {
+        const env = makeEnv();
+        const adapter = new api.TGAdapter(env, "oh_file_url");
+        const { key } = await adapter.uploadFile(
+          new File(["test"], "test.bin"),
+          {
+            ...makeMetadata(4),
+            chunkInfo: undefined,
+          }
+        );
+        assert.deepEqual(
+          (await env.oh_file_url.getWithMetadata(key)).metadata
+            .telegramMessages,
+          [{ chatId: "test-chat", messageId: 1 }]
+        );
+        await adapter.moveToTrash(key);
+        assert.equal((await stats()).deleted.length, 0);
+        const response = await send(env, `/file/trash:${key}`, {
+          method: "DELETE",
+        });
+        assert.equal(response.status, 200);
+        assert.equal(
+          (await env.oh_file_url.getWithMetadata(`trash:${key}`)).metadata,
+          null
+        );
+        const calls = (await stats()).calls.filter((call) =>
+          call.path.endsWith("/deleteMessage")
+        );
+        assert.deepEqual(
+          calls.map((call) => call.body),
+          [{ chat_id: "test-chat", message_id: 1 }]
+        );
+      });
+
+      it("retains all chat references when uploads return the same file identifier", async () => {
+        const env = { ...makeEnv(), TG_BOT_TOKEN: "duplicate" };
+        const adapter = new api.TGAdapter(env, "oh_file_url");
+        const upload = () =>
+          adapter.uploadFile(new File(["test"], "test.bin"), {
+            ...makeMetadata(4),
+            chunkInfo: undefined,
+          });
+        const first = await upload();
+        const second = await upload();
+        assert.equal(first.key, second.key);
+        assert.deepEqual(
+          (await env.oh_file_url.getWithMetadata(first.key)).metadata
+            .telegramMessages,
+          [
+            { chatId: "test-chat", messageId: 1 },
+            { chatId: "test-chat", messageId: 2 },
+          ]
+        );
+        assert.deepEqual(await adapter.delete(first.key), { isDeleted: true });
+        assert.deepEqual((await stats()).deleted, [
+          "test-chat:1",
+          "test-chat:2",
+        ]);
+      });
+
+      it("removes every finalized chunk message and upload receipt from trash", async () => {
+        const env = makeEnv();
+        const key = "doc:chunk_delete.bin";
+        const chunks = [
+          {
+            idx: 0,
+            file_id: "one",
+            size: api.MAX_CHUNK_SIZE,
+            telegramMessage: { chatId: -100123, messageId: 1 },
+          },
+          {
+            idx: 1,
+            file_id: "two",
+            size: 4,
+            telegramMessage: { chatId: -100123, messageId: 2 },
+          },
+        ];
+        await env.oh_file_url.put(key, "", {
+          metadata: makeMetadata(api.MAX_CHUNK_SIZE + 4, 2),
+        });
+        for (const chunk of chunks) {
+          await env.oh_file_url.put(
+            api.chunkReceiptKey(key, chunk.idx),
+            JSON.stringify(chunk),
+            { metadata: chunk }
+          );
+        }
+        await api.finalizeUpload(
+          env.oh_file_url,
+          key,
+          await env.oh_file_url.getWithMetadata(key),
+          chunks
+        );
+        const adapter = new api.TGAdapter(env, "oh_file_url");
+        await adapter.moveToTrash(key);
+        assert.deepEqual(await adapter.delete(`trash:${key}`), {
+          isDeleted: true,
+        });
+        assert.deepEqual((await stats()).deleted, ["-100123:1", "-100123:2"]);
+        assert.equal(
+          await env.oh_file_url.get(api.chunkReceiptKey(key, 0)),
+          null
+        );
+        assert.equal(
+          await env.oh_file_url.get(api.chunkReceiptKey(key, 1)),
+          null
+        );
+        assert.equal(
+          (await env.oh_file_url.getWithMetadata(`trash:${key}`)).metadata,
+          null
+        );
+      });
+
+      it("retains records on Telegram time or permission failures", async () => {
+        for (const token of ["expired", "nodelete"]) {
+          const env = { ...makeEnv(), TG_BOT_TOKEN: token };
+          const key = `doc:${token}.txt`;
+          await env.oh_file_url.put(key, "", {
+            metadata: {
+              ...makeMetadata(4),
+              chunkInfo: undefined,
+              telegramMessages: [{ chatId: -100123, messageId: 1 }],
+            },
+          });
+          const response = await send(env, `/file/${key}`, {
+            method: "DELETE",
+          });
+          assert.equal(response.status, 500);
+          assert.match(
+            (await response.json()).message,
+            token === "expired"
+              ? /message can't be deleted/
+              : /not enough rights/
+          );
+          assert.ok((await env.oh_file_url.getWithMetadata(key)).metadata);
+          assert.equal(
+            (await stats()).calls.filter(
+              (call) => call.path === `/bot${token}/deleteMessage`
+            ).length,
+            1
+          );
+        }
+      });
+
+      it("safely retries a partial deletion when earlier messages are already gone", async () => {
+        const env = { ...makeEnv(), TG_BOT_TOKEN: "partial" };
+        const key = "doc:retry.txt";
+        await env.oh_file_url.put(key, "", {
+          metadata: {
+            ...makeMetadata(4),
+            chunkInfo: undefined,
+            telegramMessages: [
+              { chatId: -100123, messageId: 1 },
+              { chatId: -100123, messageId: 1 },
+              { chatId: -100123, messageId: 2 },
+            ],
+          },
+        });
+        const adapter = new api.TGAdapter(env, "oh_file_url");
+        await assert.rejects(adapter.delete(key), /Too Many Requests/);
+        assert.ok((await env.oh_file_url.getWithMetadata(key)).metadata);
+        assert.deepEqual(await adapter.delete(key), { isDeleted: true });
+        assert.deepEqual((await stats()).deleted, ["-100123:1", "-100123:2"]);
+        assert.equal(
+          (await stats()).calls.filter((call) =>
+            call.path.endsWith("/deleteMessage")
+          ).length,
+          4
+        );
+      });
+
+      it("does not claim old files were deleted from chat when message IDs are unavailable", async () => {
+        const env = makeEnv();
+        const key = "doc:legacy.txt";
+        await env.oh_file_url.put(key, "", {
+          metadata: { ...makeMetadata(4), chunkInfo: undefined },
+        });
+        const adapter = new api.TGAdapter(env, "oh_file_url");
+        await assert.rejects(
+          adapter.delete(key),
+          /message reference is missing/
+        );
+        assert.ok((await env.oh_file_url.getWithMetadata(key)).metadata);
+        assert.equal((await stats()).calls.length, 0);
+      });
+
+      it("tracks imported messages and notices, including repeats while the file is in trash", async () => {
+        const env = { ...makeEnv(), TG_WEBHOOK_SECRET: "webhook-secret" };
+        const imported = async (messageId) => {
+          const response = await send(env, "/telegram/webhook", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Telegram-Bot-Api-Secret-Token": "webhook-secret",
+            },
+            body: JSON.stringify({
+              channel_post: {
+                message_id: messageId,
+                chat: { id: -100123 },
+                document: {
+                  file_id: "imported",
+                  file_name: "imported.txt",
+                  file_size: 4,
+                },
+              },
+            }),
+          });
+          assert.equal(response.status, 200);
+          return (await response.json()).data.key;
+        };
+        const key = await imported(11);
+        await imported(11);
+        assert.equal(
+          (await stats()).calls.filter((call) =>
+            call.path.endsWith("/sendMessage")
+          ).length,
+          1
+        );
+        const adapter = new api.TGAdapter(env, "oh_file_url");
+        await adapter.moveToTrash(key);
+        await imported(12);
+        assert.equal(
+          (await env.oh_file_url.getWithMetadata(key)).metadata,
+          null
+        );
+        assert.deepEqual(
+          (await env.oh_file_url.getWithMetadata(`trash:${key}`)).metadata
+            .telegramMessages,
+          [
+            { chatId: -100123, messageId: 11 },
+            { chatId: -100123, messageId: 1001 },
+            { chatId: -100123, messageId: 12 },
+            { chatId: -100123, messageId: 1002 },
+          ]
+        );
+        assert.deepEqual(await adapter.delete(`trash:${key}`), {
+          isDeleted: true,
+        });
+        assert.deepEqual((await stats()).deleted, [
+          "-100123:11",
+          "-100123:1001",
+          "-100123:12",
+          "-100123:1002",
+        ]);
       });
     }
   );

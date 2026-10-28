@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useState } from "react";
 import {
@@ -35,6 +36,7 @@ import { useWallpaperSessionStore } from "@/stores/wallpaper-session-store";
 import { WallpaperGridItem } from "./WallpaperGridItem";
 
 export function WallpaperTab() {
+  useLocale();
   const addFileLocal = useFileDataStore((s) => s.addFileLocal);
 
   const {
@@ -78,9 +80,9 @@ export function WallpaperTab() {
 
     try {
       await syncToCloud();
-      toast.success(`${activeSource.name} API Key 已同步到云端`);
+      toast.success(t("{0} API Key 已同步到云端", activeSource.name));
     } catch {
-      toast.error("同步到云端失败，请稍后重试");
+      toast.error(t("同步到云端失败，请稍后重试"));
     }
   };
 
@@ -92,7 +94,7 @@ export function WallpaperTab() {
     } catch (error: any) {
       if (error.message === "API_KEY_MISSING") {
         setIsApiKeyDialogOpen(true);
-        toast.error(`${activeSource?.name} 需要 API Key`);
+        toast.error(t("{0} 需要 API Key", activeSource?.name));
       }
     }
   };
@@ -127,9 +129,9 @@ export function WallpaperTab() {
       addFileLocal(fileItem, FileType.Image);
       addUploadedId(wp.id);
 
-      toast.success("已保存到云端");
+      toast.success(t("已保存到云端"));
     } catch (error: any) {
-      toast.error(error.message || "上传失败");
+      toast.error(error.message || t("上传失败"));
     } finally {
       setUploadingIds((prev) => {
         const next = new Set(prev);
@@ -218,7 +220,7 @@ export function WallpaperTab() {
                     : "text-amber-500 hover:text-amber-600 hover:bg-amber-500/10"
                 )}
                 onClick={() => setIsApiKeyDialogOpen(true)}
-                title="配置 API Key"
+                title={t("配置 API Key")}
               >
                 <Key className="h-4 w-4" />
               </Button>
@@ -230,10 +232,10 @@ export function WallpaperTab() {
                 size="icon"
                 onClick={() => {
                   clearList();
-                  toast.info("已清空所有结果");
+                  toast.info(t("已清空所有结果"));
                 }}
                 className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-                title="清空当前结果"
+                title={t("清空当前结果")}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -245,7 +247,7 @@ export function WallpaperTab() {
             disabled={loading}
             size="icon"
             className="h-10 w-10 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 bg-primary hover:bg-primary/90"
-            title="随机壁纸"
+            title={t("随机壁纸")}
           >
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -262,11 +264,11 @@ export function WallpaperTab() {
           <div className="relative pt-1">
             <div className="absolute -top-7.5 left-0 px-1 text-[10px] font-bold uppercase tracking-widest text-foreground/60 flex items-center gap-1.5 w-full justify-between">
               <div className="flex items-center gap-1.5">
-                <Settings2 className="h-3 w-3" /> 过滤与偏好
+                <Settings2 className="h-3 w-3" /> {t("过滤与偏好")}
               </div>
               {!activeSource.requiresApiKey && (
                 <span className="text-[9px] text-emerald-500/80 normal-case bg-emerald-500/5 px-1.5 py-0.5 rounded border border-emerald-500/10">
-                  无需 API Key
+                  {t("无需 API Key")}
                 </span>
               )}
             </div>
@@ -296,7 +298,7 @@ export function WallpaperTab() {
               </div>
             </div>
             <p className="text-sm text-muted-foreground animate-pulse font-medium">
-              正在探索精彩壁纸...
+              {t("正在探索精彩壁纸...")}
             </p>
           </div>
         ) : wallpapers.length === 0 ? (
@@ -306,7 +308,7 @@ export function WallpaperTab() {
             </div>
             <div className="text-center">
               <p className="text-lg font-bold text-muted-foreground/40">
-                空空如也...
+                {t("空空如也...")}
               </p>
             </div>
           </div>
@@ -384,7 +386,7 @@ export function WallpaperTab() {
           showCloseButton={false}
           className="max-w-none w-auto h-auto p-0 border-none bg-transparent shadow-none gap-0 flex items-center justify-center"
         >
-          <DialogTitle className="sr-only">图片预览</DialogTitle>
+          <DialogTitle className="sr-only">{t("图片预览")}</DialogTitle>
           {previewUrl && (
             <div className="relative animate-in zoom-in-95 duration-200">
               <img

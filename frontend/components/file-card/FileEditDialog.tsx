@@ -1,10 +1,17 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useState, useEffect } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { editMetadata, analyzeImage, getFileUrl } from "@/lib/api";
-import { FileItem, FileTag, MAX_FILENAME_LENGTH, MAX_DESC_LENGTH, FileType } from "@shared/types";
+import {
+  FileItem,
+  FileTag,
+  MAX_FILENAME_LENGTH,
+  MAX_DESC_LENGTH,
+  FileType,
+} from "@shared/types";
 import { compressImageFromUrl } from "@/lib/utils/file";
 import { Label } from "@radix-ui/react-dropdown-menu";
 import { TagSelector } from "@/components/TagSelector";
@@ -23,7 +30,11 @@ interface EditMetadataDialogProps {
   file: FileItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess?: (metadata: { fileName: string; tags: FileTag[]; desc?: string }) => void;
+  onSuccess?: (metadata: {
+    fileName: string;
+    tags: FileTag[];
+    desc?: string;
+  }) => void;
 }
 
 export function FileEditDialog({
@@ -32,6 +43,7 @@ export function FileEditDialog({
   onOpenChange,
   onSuccess,
 }: EditMetadataDialogProps) {
+  useLocale();
   const [baseName, setBaseName] = useState("");
   const [extension, setExtension] = useState("");
   const [tags, setTags] = useState<FileTag[]>([]);
@@ -41,9 +53,10 @@ export function FileEditDialog({
 
   // 计算完整文件名长度
   const fullFileNameLength = baseName.length + extension.length;
-  
+
   // 验证状态
-  const isFileNameValid = baseName.trim().length > 0 && fullFileNameLength <= MAX_FILENAME_LENGTH;
+  const isFileNameValid =
+    baseName.trim().length > 0 && fullFileNameLength <= MAX_FILENAME_LENGTH;
   const isDescValid = desc.length <= MAX_DESC_LENGTH;
   const canSubmit = isFileNameValid && isDescValid;
 
@@ -55,7 +68,7 @@ export function FileEditDialog({
     if (file) {
       const fullFileName = file.metadata?.fileName || "";
       const lastDotIndex = fullFileName.lastIndexOf(".");
-      
+
       // 如果文件名中有点，且不是在开头（如 .gitignore），则分离扩展名
       if (lastDotIndex > 0) {
         setBaseName(fullFileName.substring(0, lastDotIndex));
@@ -64,7 +77,7 @@ export function FileEditDialog({
         setBaseName(fullFileName);
         setExtension("");
       }
-      
+
       setTags(file.metadata?.tags || []);
       setDesc(file.metadata?.desc || "");
     }
@@ -81,19 +94,19 @@ export function FileEditDialog({
       const blob = await compressImageFromUrl(imgUrl);
       const result = await analyzeImage(file.name, blob);
       const newDesc = result.desc || "";
-      
+
       // 如果超过长度限制，截断
       if (newDesc.length > MAX_DESC_LENGTH) {
         setDesc(newDesc.slice(0, MAX_DESC_LENGTH));
-        toast.info("描述已生成，但超过长度限制已自动截断");
+        toast.info(t("描述已生成，但超过长度限制已自动截断"));
       } else {
         setDesc(newDesc);
-        toast.success("AI分析完成");
+        toast.success(t("AI分析完成"));
       }
     } catch (error) {
       console.error("AI analysis error:", error);
-      toast.error("AI分析失败", {
-        description: error instanceof Error ? error.message : "未知错误",
+      toast.error(t("AI分析失败"), {
+        description: error instanceof Error ? error.message : t("未知错误"),
       });
     } finally {
       setIsAnalyzing(false);
@@ -106,12 +119,12 @@ export function FileEditDialog({
     if (!file) return;
 
     if (!isFileNameValid) {
-      toast.warning(baseName.trim() ? "文件名过长" : "文件名不能为空");
+      toast.warning(baseName.trim() ? t("文件名过长") : t("文件名不能为空"));
       return;
     }
 
     if (!isDescValid) {
-      toast.warning("描述过长");
+      toast.warning(t("描述过长"));
       return;
     }
 
@@ -126,14 +139,14 @@ export function FileEditDialog({
 
       await editMetadata(file.name, updatedMetadata);
 
-      toast.success("元数据更新成功");
+      toast.success(t("元数据更新成功"));
 
       onOpenChange(false);
       onSuccess?.(updatedMetadata);
     } catch (error) {
       console.error("Error updating metadata:", error);
-      toast.error("更新失败", {
-        description: error instanceof Error ? error.message : "未知错误",
+      toast.error(t("更新失败"), {
+        description: error instanceof Error ? error.message : t("未知错误"),
       });
     } finally {
       setIsSubmitting(false);
@@ -146,19 +159,21 @@ export function FileEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-popover border-glass-border text-foreground max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-foreground">编辑元数据</DialogTitle>
+          <DialogTitle className="text-foreground">
+            {t("编辑元数据")}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* 文件名 */}
           <div className="space-y-2">
-            <Label className="text-foreground/80">文件名</Label>
+            <Label className="text-foreground/80">{t("文件名")}</Label>
             <div className="flex gap-2 items-center">
               <Input
                 id="fileName"
                 value={baseName}
                 onChange={(e) => setBaseName(e.target.value)}
-                placeholder="输入文件名"
+                placeholder={t("输入文件名")}
                 className={`bg-secondary/30 border-glass-border text-foreground placeholder:text-foreground/60 focus-visible:ring-primary flex-1 ${!isFileNameValid && baseName ? "border-red-500/50 focus-visible:ring-red-500" : ""}`}
                 disabled={isSubmitting}
               />
@@ -169,27 +184,43 @@ export function FileEditDialog({
               )}
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className={!isFileNameValid && baseName ? "text-red-400" : "text-foreground/40"}>
-                {baseName.trim() ? (fullFileNameLength > MAX_FILENAME_LENGTH ? `文件名过长：${fullFileNameLength} / ${MAX_FILENAME_LENGTH}` : "") : (baseName ? "文件名不能为空" : "")}
+              <span
+                className={
+                  !isFileNameValid && baseName
+                    ? "text-red-400"
+                    : "text-foreground/40"
+                }
+              >
+                {baseName.trim()
+                  ? fullFileNameLength > MAX_FILENAME_LENGTH
+                    ? t(
+                        "文件名过长：{0} / {1}",
+                        fullFileNameLength,
+                        MAX_FILENAME_LENGTH
+                      )
+                    : ""
+                  : baseName
+                    ? t("文件名不能为空")
+                    : ""}
               </span>
             </div>
           </div>
 
           {/* 标签 */}
           <div className="space-y-2">
-            <Label className="text-foreground/80">标签</Label>
+            <Label className="text-foreground/80">{t("标签")}</Label>
             <TagSelector
               tags={tags}
               onChange={setTags}
               disabled={isSubmitting}
-              placeholder="暂无标签，点击下方按钮添加..."
+              placeholder={t("暂无标签，点击下方按钮添加...")}
             />
           </div>
 
           {/* 描述 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-foreground/80">描述</Label>
+              <Label className="text-foreground/80">{t("描述")}</Label>
               {isImageFile && (
                 <Button
                   type="button"
@@ -215,13 +246,15 @@ export function FileEditDialog({
               id="desc"
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              placeholder="添加文件描述..."
+              placeholder={t("添加文件描述...")}
               className={`bg-secondary/30 border-glass-border text-foreground placeholder:text-foreground/60 focus-visible:ring-primary max-h-[120px] resize-none ${!isDescValid ? "border-red-500/50 focus-visible:ring-red-500" : ""}`}
               disabled={isSubmitting || isAnalyzing}
               rows={3}
             />
             <div className="flex justify-end text-xs">
-              <span className={`${desc.length > MAX_DESC_LENGTH ? "text-red-400" : "text-foreground/40"}`}>
+              <span
+                className={`${desc.length > MAX_DESC_LENGTH ? "text-red-400" : "text-foreground/40"}`}
+              >
                 {desc.length}/{MAX_DESC_LENGTH}
               </span>
             </div>
@@ -235,7 +268,7 @@ export function FileEditDialog({
               disabled={isSubmitting}
               className="border-glass-border text-foreground hover:bg-secondary/50"
             >
-              取消
+              {t("取消")}
             </Button>
             <Button
               type="submit"
@@ -245,10 +278,10 @@ export function FileEditDialog({
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  保存中...
+                  {t("保存中...")}
                 </>
               ) : (
-                "保存"
+                t("保存")
               )}
             </Button>
           </DialogFooter>

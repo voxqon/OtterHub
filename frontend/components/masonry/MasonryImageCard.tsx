@@ -1,4 +1,5 @@
 "use client";
+import { t, useLocale } from "@/lib/i18n";
 
 import { useFileUIStore } from "@/stores/file";
 import { FileItem, FileType } from "@shared/types";
@@ -15,6 +16,7 @@ interface MasonryImageCardProps {
 }
 
 export function MasonryImageCard({ file }: MasonryImageCardProps) {
+  useLocale();
   const { safeMode, imageLoadMode, dataSaverThreshold } =
     useGeneralSettingsStore();
   const { forceLoadFiles, addForceLoadFile } = useFileUIStore();
@@ -52,8 +54,8 @@ export function MasonryImageCard({ file }: MasonryImageCardProps) {
         addForceLoadFile(file.name);
       }}
     >
-      <Image className="w-8 h-8 opacity-50" aria-label="点击加载图片" />
-      <span className="text-xs opacity-50">点击加载</span>
+      <Image className="w-8 h-8 opacity-50" aria-label={t("点击加载图片")} />
+      <span className="text-xs opacity-50">{t("点击加载")}</span>
     </div>
   );
 

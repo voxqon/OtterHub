@@ -1,6 +1,6 @@
 import clsx, { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { format } from "date-fns";
+import { getLocale } from "@/lib/i18n/core";
 import { getFileType } from "./file";
 
 export function cn(...inputs: ClassValue[]) {
@@ -10,13 +10,24 @@ export function cn(...inputs: ClassValue[]) {
 /** 格式化时间戳为 "yyyy.MM.dd HH:mm" 格式 */
 export const formatTime = (timestamp: number): string => {
   if (isNaN(timestamp) || timestamp < 0) return "N/A";
-  return format(new Date(timestamp), "yyyy.MM.dd HH:mm");
+  return new Intl.DateTimeFormat(getLocale(), {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(timestamp);
 };
 
 /** 格式化时间戳为 "yyyy.MM.dd" 格式（仅年月日） */
 export const formatDate = (timestamp: number): string => {
   if (isNaN(timestamp) || timestamp < 0) return "N/A";
-  return format(new Date(timestamp), "yyyy.MM.dd");
+  return new Intl.DateTimeFormat(getLocale(), {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(timestamp);
 };
 
 export function buildTmpFileKey(file: File): string {
