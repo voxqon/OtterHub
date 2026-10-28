@@ -50,21 +50,21 @@ export function SortTypeDropdown() {
   };
 
   return (
-    <div className="flex items-center rounded-lg bg-glass-bg border border-glass-border overflow-hidden">
+    <div className="flex items-center rounded-xl bg-secondary/30 border border-glass-border/70 backdrop-blur-md overflow-hidden p-0.5">
       {/* 切换排序顺序的按钮 */}
       <Button
         variant="ghost"
         size="sm"
         onClick={toggleOrder}
-        className="h-9 px-3 text-foreground/80 hover:text-foreground hover:bg-secondary/50 gap-2 rounded-none border-none focus-visible:ring-0"
+        className="h-7.5 px-2.5 text-foreground/80 hover:text-foreground hover:bg-secondary/60 gap-1.5 rounded-lg border-none focus-visible:ring-0 text-xs font-medium"
       >
-        {TypeIcon && <TypeIcon className="h-4 w-4" />}
-        <span className="text-sm font-medium hidden sm:inline">{currentType?.label}</span>
-        <OrderIcon className="h-4 w-4 text-foreground/60" />
+        {TypeIcon && <TypeIcon className="h-3.5 w-3.5" />}
+        <span className="hidden sm:inline">{currentType?.label}</span>
+        <OrderIcon className="h-3.5 w-3.5 text-foreground/50" />
       </Button>
 
       {/* 分隔线 */}
-      <div className="w-px h-4 bg-glass-border" />
+      <div className="w-px h-3.5 bg-glass-border/70 mx-0.5" />
 
       {/* 切换排序类型的下拉菜单 */}
       <DropdownMenu>
@@ -72,12 +72,12 @@ export function SortTypeDropdown() {
           <Button
             variant="ghost"
             size="sm"
-            className="h-9 px-1.5 text-foreground/50 hover:text-foreground hover:bg-secondary/50 rounded-none border-none focus-visible:ring-0"
+            className="h-7.5 px-1.5 text-foreground/50 hover:text-foreground hover:bg-secondary/60 rounded-lg border-none focus-visible:ring-0"
           >
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="h-3.5 w-3.5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40 bg-popover border-glass-border shadow-xl">
+        <DropdownMenuContent align="end" className="w-40 bg-popover/95 backdrop-blur-xl border-glass-border shadow-xl rounded-xl">
           <DropdownMenuLabel className="text-xs text-foreground/50">排序字段</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={sortType} onValueChange={(v) => setSortType(v as SortType)}>
             {typeOptions.map((option) => {
@@ -86,9 +86,9 @@ export function SortTypeDropdown() {
                 <DropdownMenuRadioItem
                   key={option.value}
                   value={option.value}
-                  className="text-foreground focus:text-foreground cursor-pointer"
+                  className="text-foreground focus:text-foreground cursor-pointer rounded-lg text-xs"
                 >
-                  <Icon className="h-4 w-4 mr-2 text-foreground/60" />
+                  <Icon className="h-3.5 w-3.5 mr-2 text-foreground/60" />
                   {option.label}
                 </DropdownMenuRadioItem>
               );

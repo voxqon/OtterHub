@@ -47,29 +47,29 @@ export function FileCardGrid({ file, actions }: FileCardGridProps) {
     <>
       <div
         className={cn(
-          "group relative aspect-square rounded-xl overflow-hidden backdrop-blur-xl border transition-all cursor-pointer",
+          "group relative aspect-square rounded-2xl overflow-hidden backdrop-blur-xl border transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:shadow-black/10",
           isSelected
-            ? "bg-primary/20 border-primary/50 ring-2 ring-primary/50"
-            : "bg-glass-bg border-glass-border hover:border-primary/50",
+            ? "bg-primary/20 border-primary ring-2 ring-primary/40 shadow-primary/20"
+            : "bg-card/40 border-glass-border hover:border-primary/40 hover:-translate-y-0.5",
         )}
       >
         {/* Checkbox */}
         <div className="absolute top-3 left-3 z-10">
           <div
             className={cn(
-              "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all backdrop-blur-sm",
+              "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 backdrop-blur-md",
               isSelected
-                ? "bg-primary border-primary"
-                : "bg-secondary/50 border-glass-border opacity-100 md:opacity-0 md:group-hover:opacity-100",
+                ? "bg-primary border-primary text-primary-foreground shadow-sm shadow-primary/30"
+                : "bg-black/30 border-white/40 hover:border-white opacity-100 md:opacity-0 md:group-hover:opacity-100",
             )}
             onClick={handleSelect}
           >
-            {isSelected && <Check className="h-4 w-4 text-white" />}
+            {isSelected && <Check className="h-3.5 w-3.5" />}
           </div>
         </div>
 
         {/* Actions Menu */}
-        <div className="absolute top-3 right-3 z-10">
+        <div className="absolute top-3 right-3 z-10 transition-opacity duration-200 opacity-90 md:opacity-0 md:group-hover:opacity-100">
           <FileActions
             onDownload={handleDownload}
             onDelete={handleDelete}
@@ -84,8 +84,8 @@ export function FileCardGrid({ file, actions }: FileCardGridProps) {
         </div>
 
         {/* File Content */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="relative w-full h-full bg-linear-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center transition-transform duration-500 group-hover:scale-[1.03]">
+          <div className="relative w-full h-full bg-linear-to-br from-teal-500/10 via-primary/5 to-cyan-500/10 flex items-center justify-center">
             <FileContent
               fileType={fileType}
               fileKey={file.name}
@@ -102,9 +102,9 @@ export function FileCardGrid({ file, actions }: FileCardGridProps) {
         </div>
 
         {/* File Info Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 bg-linear-to-t from-black/80 via-black/60 to-transparent">
+        <div className="absolute bottom-0 left-0 right-0 p-3.5 bg-linear-to-t from-black/85 via-black/55 to-transparent backdrop-blur-[2px]">
           <div className="flex items-center gap-2 mb-1">
-            <p className={cn("text-sm font-medium text-white truncate transition-all duration-300", blur && "blur-xs select-none opacity-80")} title={file.metadata?.fileName}>
+            <p className={cn("text-xs sm:text-sm font-semibold text-white truncate transition-all duration-300 drop-shadow-xs", blur && "blur-xs select-none opacity-80")} title={file.metadata?.fileName}>
               {file.metadata?.fileName || file.name}
             </p>
             <div className="flex gap-1 shrink-0">
@@ -114,7 +114,7 @@ export function FileCardGrid({ file, actions }: FileCardGridProps) {
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <p className="flex items-center gap-2 text-xs text-white/50 min-w-0">
+            <p className="flex items-center gap-1.5 text-[11px] text-white/70 min-w-0 font-medium">
               <span className="shrink-0">{formatFileSize(file.metadata?.fileSize || 0)}</span>
               <span>•</span>
               <span className="shrink-0 truncate">{formatDate(file.metadata?.uploadedAt || 0)}</span>
@@ -128,7 +128,7 @@ export function FileCardGrid({ file, actions }: FileCardGridProps) {
                   handleResumeUpload();
                 }}
                 disabled={isResuming}
-                className="text-amber-300 hover:bg-amber-500/10 h-6 px-2 text-xs"
+                className="text-amber-300 hover:bg-amber-500/20 h-5 px-1.5 text-[11px] rounded-md"
               >
                 {isResuming ? (
                   <Loader2 className="h-3 w-3 animate-spin" />

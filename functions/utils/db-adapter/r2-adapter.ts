@@ -1,4 +1,6 @@
 import { BaseAdapter } from "./base-adapter";
+import type { FileRecord } from ".";
+import { createChunkStream } from "./chunk-stream";
 import { encodeContentDisposition } from "../common";
 import {
   getUniqueFileId,
@@ -7,11 +9,7 @@ import {
   getContentTypeByExt,
   getFileTypeByMimeOrExt,
 } from "../file";
-import {
-  Chunk,
-  FileMetadata,
-  FileType,
-} from "@shared/types";
+import { Chunk, FileMetadata, FileType } from "@shared/types";
 import {
   extractKeyFromTrash,
   parseRangeHeader,
@@ -31,7 +29,7 @@ export class R2Adapter extends BaseAdapter {
 
   async uploadFile(
     file: File | Blob | Uint8Array,
-    metadata: FileMetadata,
+    metadata: FileMetadata
   ): Promise<{ key: string }> {
     const fileId = getUniqueFileId();
     const fileName = metadata.fileName;
@@ -62,7 +60,7 @@ export class R2Adapter extends BaseAdapter {
     stream: ReadableStream,
     metadata: FileMetadata,
     waitUntil?: (p: Promise<any>) => void,
-    mimeType?: string,
+    mimeType?: string
   ): Promise<{ key: string }> {
     const fileId = getUniqueFileId();
     const fileName = metadata.fileName;
@@ -97,7 +95,7 @@ export class R2Adapter extends BaseAdapter {
     chunkFile: File | Blob | Uint8Array,
     parentKey: string,
     chunkIndex: number,
-    fileName?: string,
+    fileName?: string
   ): Promise<string> {
     const bucket = this.env[this.bucketName];
     const chunkId = this.getTempChunkId(parentKey, chunkIndex);
@@ -111,18 +109,26 @@ export class R2Adapter extends BaseAdapter {
     return chunkId;
   }
 
-  async get(key: string, req?: Request): Promise<Response> {
+  async get(key: string, req?: Request, item?: FileRecord): Promise<Response> {
     const { fileId, isChunk } = getFileIdFromKey(key);
     if (isChunk) {
-      return await this.getMergedFile(key, req);
+      return await this.getMergedFile(key, req, item);
     }
-    return await this.getSingleFile(key, req);
+    return await this.getSingleFile(key, req, item);
   }
 
-  private async getSingleFile(key: string, req?: Request): Promise<Response> {
+  private async getSingleFile(
+    key: string,
+    req?: Request,
+    existingItem?: FileRecord
+  ): Promise<Response> {
     try {
       const r2Key = extractKeyFromTrash(key);
-      const object = await this.env[this.bucketName].get(r2Key);
+      const range = req?.headers.get("Range");
+      const object = await this.env[this.bucketName].get(
+        r2Key,
+        range ? { range: req!.headers } : undefined
+      );
       if (!object) {
         console.error(`[getSingleFile] File not found in R2: ${r2Key}`);
         return failResponse(`File not found for key: ${key}`, 404);
@@ -138,38 +144,38 @@ export class R2Adapter extends BaseAdapter {
       headers.set("Content-Type", getContentTypeByExt(ext));
 
       const size = object.size;
-      const range = req?.headers.get("Range");
+      const item = existingItem ?? (await this.getFileMetadataWithValue(key));
+      if (!item) return failResponse("Metadata not found", 404);
+      headers.set(
+        "Content-Disposition",
+        encodeContentDisposition(item.metadata.fileName, false)
+      );
 
       // 处理 Range 请求（使用通用工具函数）
       const rangeResult = parseRangeHeader(range ?? null, size);
+      if (range && !rangeResult) {
+        await object.body?.cancel();
+        return new Response(null, {
+          status: 416,
+          headers: { "Content-Range": `bytes */${size}` },
+        });
+      }
       if (rangeResult) {
         const { start, end } = rangeResult;
-
-        const partial = await this.env[this.bucketName].get(r2Key, {
-          range: { offset: start, length: end - start + 1 },
-        });
-
-        if (!partial) {
-          return failResponse("Failed to read file range", 500);
-        }
 
         headers.set("Content-Range", `bytes ${start}-${end}/${size}`);
         headers.set("Content-Length", String(end - start + 1));
 
-        return new Response(partial.body, { status: 206, headers });
+        return new Response(object.body, { status: 206, headers });
       }
 
       headers.set("Content-Length", String(size));
       // 获取元数据以获取原始文件名
-      const item = await this.getFileMetadataWithValue(key);  //  这里如果是trash, 则用trash的key，如果非trash，即用原Key
-      if (!item) {
-        return failResponse("Metadata not found", 404);
-      }
       const { metadata } = item;
 
       headers.set(
         "Content-Disposition",
-        encodeContentDisposition(metadata.fileName, false),
+        encodeContentDisposition(metadata.fileName, false)
       );
 
       return new Response(object.body, { status: 200, headers });
@@ -179,14 +185,18 @@ export class R2Adapter extends BaseAdapter {
     }
   }
 
-  private async getMergedFile(key: string, req?: Request): Promise<Response> {
+  private async getMergedFile(
+    key: string,
+    req?: Request,
+    existingItem?: FileRecord
+  ): Promise<Response> {
     try {
-      const item = await this.getFileMetadataWithValue(key);
+      const item = existingItem ?? (await this.getFileMetadataWithValue(key));
       if (!item) {
         return failResponse("File not found", 404);
       }
       const { metadata, value } = item;
-      
+
       if (!metadata) {
         console.error(`[getMergedFile] No metadata found for key: ${key}`);
         return failResponse("Metadata not found", 404);
@@ -204,7 +214,10 @@ export class R2Adapter extends BaseAdapter {
       }
 
       // 使用通用工具函数验证分片完整性
-      const validation = validateChunksForMerge(chunks, metadata.chunkInfo?.total ?? 0);
+      const validation = validateChunksForMerge(
+        chunks,
+        metadata.chunkInfo?.total ?? 0
+      );
       if (!validation.valid) {
         console.error(`[getMergedFile] ${validation.reason}`);
         return failResponse(validation.reason || "Invalid metadata", 425);
@@ -221,8 +234,14 @@ export class R2Adapter extends BaseAdapter {
       // 处理 Range 请求（使用通用工具函数）
       const rangeResult = parseRangeHeader(
         req?.headers.get("Range") || null,
-        totalSize,
+        totalSize
       );
+      if (req?.headers.has("Range") && !rangeResult) {
+        return new Response(null, {
+          status: 416,
+          headers: { "Content-Range": `bytes */${totalSize}` },
+        });
+      }
       if (rangeResult) {
         const { start, end } = rangeResult;
 
@@ -240,7 +259,7 @@ export class R2Adapter extends BaseAdapter {
       headers.set("Content-Length", String(totalSize));
       headers.set(
         "Content-Disposition",
-        encodeContentDisposition(metadata.fileName),
+        encodeContentDisposition(metadata.fileName)
       );
 
       return new Response(this.createMergedStream(sortedChunks), {
@@ -255,108 +274,22 @@ export class R2Adapter extends BaseAdapter {
 
   // 创建合并流
   private createMergedStream(chunks: Chunk[]) {
-    const bucket = this.env[this.bucketName];
-    return new ReadableStream({
-      async start(controller) {
-        try {
-          console.log(`[createMergedStream] Merging ${chunks.length} chunks`);
-          for (const chunk of chunks) {
-            const object = await bucket.get(chunk.file_id);
-            if (!object) {
-              throw new Error(`Missing chunk ${chunk.idx}`);
-            }
-
-            const reader = object.body.getReader();
-            try {
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                controller.enqueue(value);
-              }
-            } finally {
-              reader.releaseLock();
-            }
-          }
-          console.log(`[createMergedStream] Completed`);
-          controller.close();
-        } catch (err) {
-          console.error(`[createMergedStream] Error:`, err);
-          controller.error(err);
-        }
-      },
-      cancel() {
-        console.log(`[createMergedStream] Cancelled`);
-      },
-    });
+    const total = chunks.reduce((size, chunk) => size + chunk.size, 0);
+    return this.createRangeStream(chunks, 0, total - 1);
   }
 
   // 创建 Range 流
   private createRangeStream(chunks: Chunk[], start: number, end: number) {
     const bucket = this.env[this.bucketName];
-    return new ReadableStream({
-      async start(controller) {
-        try {
-          let byteOffset = 0;
-          const targetEnd = end + 1;
-
-          console.log(
-            `[Range] Stream start: ${start}-${end}/${chunks.length} chunks`,
-          );
-
-          for (const chunk of chunks) {
-            const chunkStart = byteOffset;
-            const chunkEnd = byteOffset + chunk.size;
-
-            // 跳过不在范围内的分片
-            if (chunkEnd <= start || chunkStart >= targetEnd) {
-              byteOffset += chunk.size;
-              continue;
-            }
-
-            // 计算当前分片需要读取的范围
-            const readStart = Math.max(0, start - chunkStart);
-            const readEnd = Math.min(chunk.size, targetEnd - chunkStart);
-
-            // 检查是否需要读取完整分片
-            const isFullChunk = readStart === 0 && readEnd === chunk.size;
-
-            let object;
-            if (isFullChunk) {
-              object = await bucket.get(chunk.file_id);
-            } else {
-              object = await bucket.get(chunk.file_id, {
-                range: { offset: readStart, length: readEnd - readStart },
-              });
-            }
-
-            if (!object) {
-              throw new Error(`Missing chunk ${chunk.idx}`);
-            }
-
-            const reader = object.body.getReader();
-            try {
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                controller.enqueue(value);
-              }
-            } finally {
-              reader.releaseLock();
-            }
-
-            byteOffset += chunk.size;
-          }
-
-          console.log(`[Range] Stream completed`);
-          controller.close();
-        } catch (err) {
-          console.error(`[Range] Stream error:`, err);
-          controller.error(err);
-        }
-      },
-      cancel() {
-        console.log(`[Range] Stream cancelled`);
-      },
+    return createChunkStream(chunks, start, end, async (chunk, range) => {
+      const object = await bucket.get(
+        chunk.file_id,
+        range.offset === 0 && range.length === chunk.size
+          ? undefined
+          : { range }
+      );
+      if (!object) throw new Error(`Missing chunk ${chunk.idx}`);
+      return object.body;
     });
   }
 
@@ -376,13 +309,13 @@ export class R2Adapter extends BaseAdapter {
       // 删除所有分片
       if (chunks.length > 0) {
         const deletePromises = chunks.map((chunk) =>
-          this.env[this.bucketName].delete(chunk.file_id),
+          this.env[this.bucketName].delete(chunk.file_id)
         );
         await Promise.all(deletePromises);
       }
 
       // 删除主文件
-      await this.env[this.bucketName].delete(key);
+      await this.env[this.bucketName].delete(extractKeyFromTrash(key));
 
       // 从KV存储中删除文件信息
       await this.env[this.kvName].delete(key);

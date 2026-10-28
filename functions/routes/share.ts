@@ -23,6 +23,11 @@ const app = new Hono<{ Bindings: Env }>();
 
 const shareKeyPrefix = "share:";
 
+app.use("*", async (c, next) => {
+  await next();
+  c.header("Cache-Control", "private, no-store, max-age=0");
+});
+
 // --- Helpers ---
 
 /**
@@ -35,11 +40,17 @@ function calcBundleTotalSize(files: BundleFileInfo[]): number {
 /**
  * 安全地从 KV 获取并解析 JSON 数据
  */
-async function getKVData<T>(kv: KVNamespace, key: string): Promise<T | null> {
+async function getShareData(
+  kv: KVNamespace,
+  key: string
+): Promise<ShareData | null> {
   const raw = await kv.get(key);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as T;
+    const data = JSON.parse(raw) as ShareData;
+    if (data.expiresAt !== undefined && data.expiresAt <= Date.now())
+      return null;
+    return data;
   } catch {
     return null;
   }
@@ -53,7 +64,7 @@ const createShareSchema = z.object({
   fileKey: z.string().optional(), // single 模式
   fileKeys: z.array(z.string()).optional(), // bundle 模式
   bundleName: z.string().optional(), // bundle 模式下用户自定义名称
-  expireIn: z.number().optional(), // Seconds from now, undefined means forever (or max KV limit)
+  expireIn: z.number().int().min(60).optional(), // Omit for a permanent share.
 });
 
 // 1. Create Share Link (Protected)
@@ -144,38 +155,41 @@ app.post(
 // 2. List Shares (Protected)
 app.get("/list", authMiddleware, async (c) => {
   const kv = c.env.oh_file_url;
-  const list = await kv.list({ prefix: shareKeyPrefix });
-
   const shares: ShareListItem[] = [];
-  if (list && list.keys) {
-    for (const key of list.keys) {
-      const data = await getKVData<ShareData>(kv, key.name);
-      if (data) {
-        const token = key.name.replace(shareKeyPrefix, "");
-        if (data.type === "bundle") {
-          shares.push({
-            token,
-            type: "bundle",
-            files: data.files,
-            bundleName: data.bundleName,
-            totalSize: data.totalSize,
-            createdAt: data.createdAt,
-            expiresAt: data.expiresAt,
-          });
-        } else {
-          shares.push({
-            token,
-            type: "single",
-            fileKey: data.fileKey,
-            fileName: data.fileName,
-            fileSize: data.fileSize,
-            createdAt: data.createdAt,
-            expiresAt: data.expiresAt,
-          });
+  let cursor: string | undefined;
+  do {
+    const list = await kv.list({ prefix: shareKeyPrefix, cursor });
+    if (list && list.keys) {
+      for (const key of list.keys) {
+        const data = await getShareData(kv, key.name);
+        if (data) {
+          const token = key.name.replace(shareKeyPrefix, "");
+          if (data.type === "bundle") {
+            shares.push({
+              token,
+              type: "bundle",
+              files: data.files,
+              bundleName: data.bundleName,
+              totalSize: data.totalSize,
+              createdAt: data.createdAt,
+              expiresAt: data.expiresAt,
+            });
+          } else {
+            shares.push({
+              token,
+              type: "single",
+              fileKey: data.fileKey,
+              fileName: data.fileName,
+              fileSize: data.fileSize,
+              createdAt: data.createdAt,
+              expiresAt: data.expiresAt,
+            });
+          }
         }
       }
     }
-  }
+    cursor = list.list_complete ? undefined : list.cursor;
+  } while (cursor);
 
   // Sort by createdAt desc
   shares.sort((a, b) => b.createdAt - a.createdAt);
@@ -198,7 +212,7 @@ app.get("/:token/meta", async (c) => {
   const kv = c.env.oh_file_url;
   const shareKey = `${shareKeyPrefix}${token}`;
 
-  const shareData = await getKVData<ShareData>(kv, shareKey);
+  const shareData = await getShareData(kv, shareKey);
   if (!shareData) return fail(c, "Link expired or invalid", 404);
 
   // 打包分享
@@ -238,7 +252,7 @@ app.get("/:token/raw", async (c) => {
   const kv = c.env.oh_file_url;
   const shareKey = `${shareKeyPrefix}${token}`;
 
-  const shareData = await getKVData<ShareData>(kv, shareKey);
+  const shareData = await getShareData(kv, shareKey);
   if (!shareData) return fail(c, "Link expired or invalid", 404);
 
   const db = DBAdapterFactory.getAdapter(c.env);
@@ -272,7 +286,7 @@ app.get("/:token/download-all", async (c) => {
   const kv = c.env.oh_file_url;
   const shareKey = `${shareKeyPrefix}${token}`;
 
-  const shareData = await getKVData<ShareData>(kv, shareKey);
+  const shareData = await getShareData(kv, shareKey);
   if (!shareData) return fail(c, "Link expired or invalid", 404);
 
   // 只支持打包分享

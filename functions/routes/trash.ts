@@ -1,31 +1,37 @@
-import { Hono } from 'hono';
+import { Hono } from "hono";
 
-import { DBAdapterFactory } from '@utils/db-adapter';
-import { deleteCache, deleteFileCache } from '@utils/cache';
-import type { Env } from '../types/hono';
-import { authMiddleware } from '../middleware/auth';
-import { fail, ok } from '@utils/response';
+import { DBAdapterFactory } from "@utils/db-adapter";
+import { deleteCache, deleteFileCache } from "@utils/cache";
+import type { Env } from "../types/hono";
+import { authMiddleware } from "../middleware/auth";
+import { fail, ok } from "@utils/response";
+import { trashPrefix } from "@shared/types";
 
 export const trashRoutes = new Hono<{ Bindings: Env }>();
 
 // 所有回收站接口都需要认证
-trashRoutes.use('*', authMiddleware);
+trashRoutes.use("*", authMiddleware);
 
 // 获取回收站文件内容
-trashRoutes.get('/:key', async (c) => {
-  const trashKey = c.req.param('key');
+trashRoutes.get("/:key", async (c) => {
+  const trashKey = c.req.param("key");
+  if (!trashKey.startsWith(trashPrefix))
+    return fail(c, "Invalid trash key", 400);
+  c.header("Cache-Control", "private, no-store, max-age=0");
   try {
     const db = DBAdapterFactory.getAdapter(c.env);
     return await db.get(trashKey, c.req.raw);
   } catch (error: any) {
-    console.error('Fetch trash file error:', error);
+    console.error("Fetch trash file error:", error);
     return fail(c, `Failed to fetch trash file: ${error.message}`, 500);
   }
 });
 
 // 移入回收站
-trashRoutes.post('/:key/move', async (c) => {
-  const key = c.req.param('key');
+trashRoutes.post("/:key/move", async (c) => {
+  const key = c.req.param("key");
+  if (key.startsWith(trashPrefix))
+    return fail(c, "File is already in trash", 400);
   try {
     const db = DBAdapterFactory.getAdapter(c.env);
     await db.moveToTrash(key);
@@ -35,23 +41,25 @@ trashRoutes.post('/:key/move', async (c) => {
     await deleteCache(c.req.raw);
     await deleteFileCache(url.origin, key);
 
-    return ok(c, key, 'File moved to trash');
+    return ok(c, key, "File moved to trash");
   } catch (error: any) {
-    console.error('Move to trash error:', error);
+    console.error("Move to trash error:", error);
     return fail(c, `Failed to move file to trash: ${error.message}`, 500);
   }
 });
 
 // 从回收站还原
-trashRoutes.post('/:key/restore', async (c) => {
-  const trashKey = c.req.param('key');
+trashRoutes.post("/:key/restore", async (c) => {
+  const trashKey = c.req.param("key");
+  if (!trashKey.startsWith(trashPrefix))
+    return fail(c, "Invalid trash key", 400);
   try {
     const db = DBAdapterFactory.getAdapter(c.env);
     await db.restoreFromTrash(trashKey);
 
-    return ok(c, trashKey, 'File restored successfully');
+    return ok(c, trashKey, "File restored successfully");
   } catch (error: any) {
-    console.error('Restore file error:', error);
+    console.error("Restore file error:", error);
     return fail(c, `Failed to restore file: ${error.message}`, 500);
   }
 });

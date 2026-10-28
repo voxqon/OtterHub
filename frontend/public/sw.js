@@ -1,4 +1,4 @@
-const CACHE_NAME = "otterhub-shell-v1";
+const CACHE_NAME = "otterhub-shell-v2";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE_URLS = [
   "/",
@@ -14,22 +14,28 @@ const PRECACHE_URLS = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS)).then(() => self.skipWaiting()),
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-          return Promise.resolve(false);
-        }),
-      ),
-    ).then(() => self.clients.claim()),
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys.map((key) => {
+            if (key.startsWith("otterhub-shell-") && key !== CACHE_NAME) {
+              return caches.delete(key);
+            }
+            return Promise.resolve(false);
+          })
+        )
+      )
+      .then(() => self.clients.claim())
   );
 });
 
@@ -81,11 +87,16 @@ async function handleStaticAsset(request) {
   const cached = await cache.match(request);
 
   if (cached) {
-    void fetch(request).then((response) => {
-      if (response.ok) {
-        cache.put(request, response.clone());
-      }
-    }).catch(() => undefined);
+    if (new URL(request.url).pathname.startsWith("/_next/static/")) {
+      return cached;
+    }
+    void fetch(request)
+      .then((response) => {
+        if (response.ok) {
+          cache.put(request, response.clone());
+        }
+      })
+      .catch(() => undefined);
 
     return cached;
   }

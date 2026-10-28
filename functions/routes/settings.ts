@@ -6,6 +6,7 @@ import { GeneralSettings } from '@shared/types';
 import { ok, fail } from '@utils/response';
 import { kvGetJSON } from '@utils/kv';
 import { Env } from 'types/hono';
+import { createMiddleware } from 'hono/factory';
 
 function createSettingsRoutes<T>(
   app: Hono<{ Bindings: Env }>,
@@ -46,6 +47,48 @@ export const settingsRoutes = new Hono<{ Bindings: Env }>();
 settingsRoutes.use('*', authMiddleware);
 
 /* ========= Settings ========= */
+
+const PUBLIC_API_KEY = 'oh_public_api_secret';
+
+const protectPublicApiSettings = createMiddleware<{ Bindings: Env }>(async (c, next) => {
+  const origin = c.req.header('Origin');
+  if (origin) {
+    const requestUrl = new URL(c.req.url);
+    let allowed = false;
+    try {
+      const originUrl = new URL(origin);
+      allowed = originUrl.origin === requestUrl.origin ||
+        (requestUrl.hostname === 'localhost' && originUrl.hostname === 'localhost' &&
+          originUrl.protocol === requestUrl.protocol);
+    } catch {
+      allowed = false;
+    }
+    if (!allowed) return fail(c, 'Cross-origin access denied', 403);
+  }
+  await next();
+});
+settingsRoutes.use('/public-api', protectPublicApiSettings);
+settingsRoutes.use('/public-api/*', protectPublicApiSettings);
+
+settingsRoutes.get('/public-api', async c => {
+  const secret = await c.env.oh_file_url.get(PUBLIC_API_KEY);
+  c.header('Cache-Control', 'no-store');
+  return ok(c, { configured: Boolean(secret) });
+});
+
+settingsRoutes.post('/public-api/rotate', async c => {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  const secret = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  await c.env.oh_file_url.put(PUBLIC_API_KEY, secret);
+  c.header('Cache-Control', 'no-store');
+  return ok(c, { secret });
+});
+
+settingsRoutes.delete('/public-api', async c => {
+  await c.env.oh_file_url.delete(PUBLIC_API_KEY);
+  c.header('Cache-Control', 'no-store');
+  return ok(c, { configured: false });
+});
 
 createSettingsRoutes<GeneralSettings>(
   settingsRoutes,

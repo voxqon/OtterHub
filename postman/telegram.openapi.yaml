@@ -1,0 +1,65 @@
+openapi: 3.0.3
+info:
+  title: Telegram Bot API subset for OtterHub regression tests
+  version: 1.0.0
+  description: >
+    Local test contract for the Telegram operations OtterHub calls.
+    Based on https://core.telegram.org/bots/api#getfile and
+    https://core.telegram.org/bots/api#senddocument. This is not the full provider spec.
+servers:
+  - url: https://api.telegram.org
+paths:
+  /bot{token}/sendDocument:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [chat_id, document]
+              properties:
+                chat_id: { type: string }
+                document: { type: string, format: binary }
+      responses:
+        "200":
+          description: Message containing the uploaded document
+          content:
+            application/json:
+              example:
+                ok: true
+                result:
+                  message_id: 1
+                  document: { file_id: uploaded-1, file_size: 4 }
+        "400":
+          description: Invalid request; retrying unchanged cannot fix it
+        "401":
+          description: Invalid bot token
+        "429":
+          description: Rate limit; parameters.retry_after is in seconds
+  /bot{token}/getFile:
+    get:
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+        - { name: file_id, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Download path valid for at least one hour
+          content:
+            application/json:
+              example: { ok: true, result: { file_path: files/part-0 } }
+  /file/bot{token}/{filePath}:
+    get:
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+        - { name: filePath, in: path, required: true, schema: { type: string } }
+        - { name: Range, in: header, schema: { type: string } }
+      responses:
+        "200": { description: Complete file bytes }
+        "206": { description: Requested file bytes with Content-Range }
+        "404": { description: Missing or expired download path }

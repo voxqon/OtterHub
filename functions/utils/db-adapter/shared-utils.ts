@@ -12,17 +12,23 @@ export function parseRangeHeader(
 ): { start: number; end: number } | null {
   if (!range) return null;
 
-  const match = /bytes=(\d+)-(\d+)?/.exec(range);
-  if (!match) return null;
-
+  const match = /^bytes=(\d*)-(\d*)$/i.exec(range.trim());
+  if (!match || (!match[1] && !match[2]) || fileSize <= 0) return null;
+  if (!match[1]) {
+    const suffix = Number(match[2]);
+    if (!Number.isSafeInteger(suffix) || suffix <= 0) return null;
+    return { start: Math.max(0, fileSize - suffix), end: fileSize - 1 };
+  }
   const start = Number(match[1]);
   const end = match[2] ? Number(match[2]) : fileSize - 1;
-
-  if (start >= fileSize || end < start) {
+  if (
+    !Number.isSafeInteger(start) ||
+    !Number.isSafeInteger(end) ||
+    start >= fileSize ||
+    end < start
+  )
     return null;
-  }
-
-  return { start, end };
+  return { start, end: Math.min(end, fileSize - 1) };
 }
 
 /**
@@ -33,11 +39,19 @@ export function parseRangeHeader(
  * @param metadata 文件元数据
  * @returns 完整性检查结果
  */
-export function validateUploadCompletion(
-  metadata: FileMetadata,
-): { valid: boolean; uploaded: number; total: number; reason?: string } {
+export function validateUploadCompletion(metadata: FileMetadata): {
+  valid: boolean;
+  uploaded: number;
+  total: number;
+  reason?: string;
+} {
   if (!metadata?.chunkInfo) {
-    return { valid: false, uploaded: 0, total: 0, reason: "No chunkInfo in metadata" };
+    return {
+      valid: false,
+      uploaded: 0,
+      total: 0,
+      reason: "No chunkInfo in metadata",
+    };
   }
 
   const { chunkInfo } = metadata;
@@ -67,7 +81,7 @@ export function validateUploadCompletion(
  */
 export function validateChunksForMerge(
   chunks: Chunk[],
-  expectedTotal: number,
+  expectedTotal: number
 ): { valid: boolean; reason?: string } {
   if (chunks.length !== expectedTotal) {
     return {
@@ -79,7 +93,7 @@ export function validateChunksForMerge(
   // 检查分片索引是否连续（0, 1, 2, ..., total-1）
   const sortedIndices = [...chunks]
     .sort((a, b) => a.idx - b.idx)
-    .map(c => c.idx);
+    .map((c) => c.idx);
 
   for (let i = 0; i < expectedTotal; i++) {
     if (sortedIndices[i] !== i) {
@@ -115,10 +129,10 @@ export function sortChunksAndCalculateSize(chunks: Chunk[]): {
  */
 export function isUploadedChunk(
   metadata: FileMetadata,
-  chunkIndex: number,
+  chunkIndex: number
 ): boolean | null {
   if (!metadata?.chunkInfo) return null;
-  return metadata.chunkInfo.uploadedIndices?.includes(chunkIndex)
+  return metadata.chunkInfo.uploadedIndices?.includes(chunkIndex);
 }
 
 /**

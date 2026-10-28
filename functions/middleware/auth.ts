@@ -3,21 +3,8 @@ import { verifyJWT } from "@utils/auth";
 import type { Env } from "../types/hono";
 import { fail } from "@utils/response";
 
-const PUBLIC_PATHS = [
-  /^\/$/,
-  /^\/auth\/login/,
-  /^\/_next\//,
-  /\.(ico|png|svg|jpg|jpeg|css|js|webmanifest|json|woff|woff2|ttf|eot)$/,
-];
-
 export const authMiddleware = createMiddleware<{ Bindings: Env }>(
   async (c, next) => {
-    const path = c.req.path;
-    if (PUBLIC_PATHS.some((pattern) => pattern.test(path))) {
-      await next();
-      return;
-    }
-
     const env = c.env;
 
     // 1. 优先检查 API Token (Authorization Header)
@@ -35,7 +22,7 @@ export const authMiddleware = createMiddleware<{ Bindings: Env }>(
     const authCookie = cookie?.match(/(?:^|;\s*)auth=([^;]+)/)?.[1];
 
     if (!authCookie) {
-      return fail(c, `Unauthorized, cookie: ${cookie}`, 401);
+      return fail(c, "Unauthorized", 401);
     }
 
     try {

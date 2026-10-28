@@ -144,23 +144,23 @@ function ShareContent() {
         <div className="absolute inset-0 bg-linear-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 z-0" />
 
         <Card
-          className={`z-10 border-white/20 shadow-xl backdrop-blur-md bg-card/80 w-full ${isBundle ? "max-w-2xl" : "max-w-md"}`}
+          className={`z-10 border-glass-border shadow-2xl backdrop-blur-2xl bg-card/75 rounded-3xl w-full ${isBundle ? "max-w-2xl" : "max-w-md"}`}
         >
           <CardHeader className="text-center space-y-4">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-linear-to-tr from-primary to-teal-400 text-primary-foreground shadow-lg shadow-primary/25">
               {isBundle ? (
-                <Package className="h-10 w-10 text-primary" />
+                <Package className="h-10 w-10" />
               ) : (
-                <FileIcon className="h-10 w-10 text-primary" />
+                <FileIcon className="h-10 w-10" />
               )}
             </div>
             <div className="space-y-1">
-              <CardTitle className="text-xl break-all">
+              <CardTitle className="text-xl break-all font-bold tracking-tight">
                 {isBundle
                   ? meta?.bundleName || `share-${token?.slice(0, 8)}`
                   : meta?.fileName}
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground font-medium">
                 {isBundle
                   ? `${meta?.files?.length || 0} 个文件 · ${formatFileSize(meta?.totalSize || 0)}`
                   : formatFileSize(meta?.fileSize || 0)}

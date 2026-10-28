@@ -18,9 +18,10 @@ export function FileTypeTabs() {
   const setActiveType = useFileDataStore((s) => s.setActiveType);
 
   return (
-    <div className="flex items-center gap-[clamp(1rem,1vw,5rem)] flex-wrap">
+    <div className="inline-flex items-center gap-1.5 p-1 rounded-2xl bg-secondary/30 border border-glass-border/70 backdrop-blur-md">
       {fileTypes.map((type) => {
         const Icon = type.icon;
+        const isActive = activeType === type.id;
 
         return (
           <Button
@@ -29,15 +30,15 @@ export function FileTypeTabs() {
             size="sm"
             onClick={() => setActiveType(type.id)}
             className={`
-              transition-all duration-200
+              relative h-8 px-3.5 rounded-xl font-medium text-xs transition-all duration-200 select-none
               ${
-                activeType === type.id
-                  ? "bg-primary/20 text-primary border border-primary/50"
-                  : "text-foreground/80 hover:text-foreground hover:bg-secondary/50"
+                isActive
+                  ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30 hover:bg-primary/90 hover:text-primary-foreground"
+                  : "text-foreground/70 hover:text-foreground hover:bg-secondary/60"
               }
             `}
           >
-            {Icon && <Icon className="h-4 w-4 mr-2" />}
+            {Icon && <Icon className={`h-3.5 w-3.5 mr-1.5 transition-transform duration-200 ${isActive ? "scale-110" : ""}`} />}
             {type.label}
           </Button>
         );

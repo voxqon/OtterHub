@@ -1,24 +1,35 @@
-import { FileMetadata } from "@shared/types";
+import { FileMetadata, UploadedChunk } from "@shared/types";
 import { isDev } from "../common";
 import { R2Adapter } from "./r2-adapter";
 import { TGAdapter } from "./tg-adapter";
 import { CF } from "types";
 
+export type FileRecord = { metadata: FileMetadata; value: string | null };
+
 // 存储适配器接口定义
 export interface DBAdapter {
   // 上传单个完整文件；waitUntil 可选，传入后 AI 分析将在后台异步执行
-  uploadFile(file: File | Blob | Uint8Array, metadata: FileMetadata, waitUntil?: (p: Promise<any>) => void): Promise<{ key: string }>;
-  uploadStream(stream: ReadableStream, metadata: FileMetadata, waitUntil?: (p: Promise<any>) => void, mimeType?: string): Promise<{ key: string }>;
+  uploadFile(
+    file: File | Blob | Uint8Array,
+    metadata: FileMetadata,
+    waitUntil?: (p: Promise<any>) => void
+  ): Promise<{ key: string }>;
+  uploadStream(
+    stream: ReadableStream,
+    metadata: FileMetadata,
+    waitUntil?: (p: Promise<any>) => void,
+    mimeType?: string
+  ): Promise<{ key: string }>;
   // 上传分片文件
   uploadChunk(
     key: string,
     chunkIndex: number,
     chunkFile: File | Blob,
-    waitUntil?: (promise: Promise<any>) => void,
-  ): Promise<{ chunkIndex: number }>;
+    waitUntil?: (promise: Promise<any>) => void
+  ): Promise<{ chunkIndex: number; chunk?: UploadedChunk }>;
 
   // 获取文件，永远返回Response
-  get(key: string, req?: Request): Promise<Response>;
+  get(key: string, req?: Request, item?: FileRecord): Promise<Response>;
 
   // 删除文件
   // TODO: 是否要在key不存在时直接返回
@@ -44,16 +55,24 @@ export enum DBAdapterType {
 
 // 存储适配器工厂类
 export class DBAdapterFactory {
-  private static adapterInstances: Map<string, DBAdapter> = new Map();
+  private static adapterInstances = new WeakMap<
+    object,
+    Map<string, DBAdapter>
+  >();
 
   static getAdapter(env: any, adapterType?: string): DBAdapter {
-    const type =
-      adapterType || (isDev(env) ? DBAdapterType.R2 : DBAdapterType.TG);
+    const type = (
+      adapterType || (isDev(env) ? DBAdapterType.R2 : DBAdapterType.TG)
+    ).toLowerCase();
+    let instances = this.adapterInstances.get(env);
+    if (!instances) {
+      instances = new Map();
+      this.adapterInstances.set(env, instances);
+    }
 
     // 检查缓存中是否已有实例
-    if (this.adapterInstances.has(type)) {
-      // console.log(`DBAdapter hit: ${type}`);
-      return this.adapterInstances.get(type)!;
+    if (instances.has(type)) {
+      return instances.get(type)!;
     }
 
     // 创建新实例
@@ -68,7 +87,7 @@ export class DBAdapterFactory {
       default:
         throw new Error(`Unsupported storage adapter type: ${type}`);
     }
-    this.adapterInstances.set(type, adapter);
+    instances.set(type, adapter);
 
     return adapter;
   }

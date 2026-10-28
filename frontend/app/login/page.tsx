@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Footer } from "@/components/footer";
 import { APP_NAME, APP_TAGLINE } from "@/lib/ui-text";
+import { getSafeRedirectPath } from "@/lib/utils/common";
 
 type LoginFormValues = {
   password: string;
@@ -26,19 +27,6 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // 获取重定向 URL，默认跳转到首页
-  const getRedirectUrl = () => {
-    const redirect = searchParams.get("redirect");
-    // 安全检查：确保重定向 URL 是站内地址
-    if (
-      redirect &&
-      (redirect.startsWith("/") || redirect.startsWith(window.location.origin))
-    ) {
-      return redirect;
-    }
-    return "/";
-  };
 
   const form = useForm<LoginFormValues>({
     defaultValues: {
@@ -55,7 +43,10 @@ function LoginContent() {
         throw new Error("登录失败，请检查密码");
       }
       toast.success("登录成功");
-      const redirectUrl = getRedirectUrl();
+      const redirectUrl = getSafeRedirectPath(
+        searchParams.get("redirect"),
+        window.location.origin
+      );
       router.push(redirectUrl);
     } catch (err: any) {
       console.error("Login failed:", err);
@@ -67,63 +58,69 @@ function LoginContent() {
   const submitLogin = form.handleSubmit(onSubmit);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[320px] z-10 animate-in fade-in zoom-in duration-700">
-      <div className="flex flex-col items-center mb-10">
-        <div className="w-20 h-20 rounded-3xl bg-linear-to-br from-primary to-accent flex items-center justify-center text-5xl shadow-2xl shadow-primary/30 mb-6 animate-bounce">
-          🦦
+    <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[360px] z-10 animate-in fade-in zoom-in-95 duration-700">
+      <div className="w-full p-8 rounded-3xl bg-card/60 backdrop-blur-2xl border border-glass-border shadow-2xl shadow-black/10 flex flex-col items-center">
+        <div className="flex flex-col items-center mb-8">
+          <div className="relative w-20 h-20 rounded-3xl bg-linear-to-tr from-primary via-emerald-400 to-teal-300 flex items-center justify-center text-4xl shadow-xl shadow-primary/30 mb-5 select-none transition-transform hover:scale-105 duration-300">
+            <span>🦦</span>
+          </div>
+          <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
+            {APP_NAME}
+          </h1>
+          <p className="text-foreground/50 text-xs font-semibold mt-1.5 tracking-widest uppercase">
+            {APP_TAGLINE}
+          </p>
         </div>
-        <h1 className="text-4xl font-black text-foreground tracking-tighter">
-          {APP_NAME}
-        </h1>
-        <p className="text-foreground/50 text-sm font-medium mt-2 tracking-widest uppercase">
-          {APP_TAGLINE}
-        </p>
-      </div>
 
-      <Form {...form}>
-        <form onSubmit={submitLogin} className="w-full space-y-4">
-          <FormField
-            control={form.control}
-            name="password"
-            rules={{ required: "请输入密码" }}
-            render={({ field }) => (
-              <FormItem className="space-y-0">
-                <FormControl>
-                  <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/30 group-focus-within:text-primary transition-colors" />
-                    <Input
-                      type="password"
-                      placeholder="请输入访问密码"
-                      className="h-12 pl-11 bg-glass-bg border-glass-border backdrop-blur-md text-foreground placeholder:text-foreground/30 focus-visible:ring-primary/50 transition-all rounded-2xl"
-                      disabled={loading}
-                      onKeyDown={(event) => {
-                        if (
-                          event.key !== "Enter" ||
-                          event.nativeEvent.isComposing ||
-                          loading
-                        ) {
-                          return;
-                        }
-                        event.preventDefault();
-                        submitLogin();
-                      }}
-                      {...field}
-                    />
-                  </div>
-                </FormControl>
-                <FormMessage className="text-center mt-2 text-xs" />
-              </FormItem>
-            )}
-          />
-          <Button
-            type="submit"
-            className="w-full h-12 rounded-2xl bg-foreground text-background hover:opacity-90 transition-all font-bold text-base shadow-xl"
-            disabled={loading}
-          >
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "登录"}
-          </Button>
-        </form>
-      </Form>
+        <Form {...form}>
+          <form onSubmit={submitLogin} className="w-full space-y-4">
+            <FormField
+              control={form.control}
+              name="password"
+              rules={{ required: "请输入密码" }}
+              render={({ field }) => (
+                <FormItem className="space-y-0">
+                  <FormControl>
+                    <div className="relative group">
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/40 group-focus-within:text-primary transition-colors" />
+                      <Input
+                        type="password"
+                        placeholder="请输入访问密码"
+                        className="h-11 pl-10.5 bg-secondary/40 border-glass-border backdrop-blur-md text-foreground placeholder:text-foreground/40 focus-visible:ring-2 focus-visible:ring-primary/30 transition-all rounded-xl text-sm"
+                        disabled={loading}
+                        onKeyDown={(event) => {
+                          if (
+                            event.key !== "Enter" ||
+                            event.nativeEvent.isComposing ||
+                            loading
+                          ) {
+                            return;
+                          }
+                          event.preventDefault();
+                          submitLogin();
+                        }}
+                        {...field}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage className="text-center mt-2 text-xs" />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="submit"
+              className="w-full h-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-all font-semibold text-sm shadow-lg shadow-primary/25 active:scale-[0.99]"
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "进入系统"
+              )}
+            </Button>
+          </form>
+        </Form>
+      </div>
     </div>
   );
 }

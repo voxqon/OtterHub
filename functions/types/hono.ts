@@ -31,6 +31,7 @@ export type Env = {
 
   TG_CHAT_ID?: string;
   TG_BOT_TOKEN?: string;
+  TG_API_BASE_URL?: string;
   TG_WEBHOOK_SECRET?: string;
 
   /** Workers AI binding，可选；不配置时 AI 富化功能自动跳过 */

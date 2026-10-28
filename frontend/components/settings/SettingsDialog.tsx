@@ -9,13 +9,14 @@ import {
 } from "@/components/ui/dialog";
 import { WallpaperTab } from "./wallpaper-tab/WallpaperTab";
 import { GeneralTab } from "./general-tab/GeneralTab";
-import { LayoutGrid, Image as ImageIcon, Settings, Share2 } from "lucide-react";
+import { LayoutGrid, Image as ImageIcon, Settings, Share2, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShareTab } from "./share-tab/ShareTab";
 import { useUIStore } from "@/stores/ui-store";
 import { SettingTab } from "@/lib/types/settings";
 import type { SettingsSnapshot } from "@/stores/general-store";
 import { useGeneralSettingsStore } from "@/stores/general-store";
+import { PublicApiTab } from "./public-api-tab/PublicApiTab";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -44,6 +45,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       label: "分享管理",
       icon: Share2,
       color: "text-emerald-500",
+    },
+    {
+      id: SettingTab.PublicApi,
+      label: "公共接口",
+      icon: KeyRound,
+      color: "text-amber-600",
     },
   ];
 
@@ -145,9 +152,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 />
               )}
               {activeTab === SettingTab.Share && <ShareTab />}
+              {activeTab === SettingTab.PublicApi && <PublicApiTab />}
               {activeTab !== SettingTab.Wallpaper &&
                 activeTab !== SettingTab.General &&
-                activeTab !== SettingTab.Share && (
+                activeTab !== SettingTab.Share &&
+                activeTab !== SettingTab.PublicApi && (
                   <div className="h-full flex flex-col items-center justify-center text-muted-foreground/20">
                     <div className="p-8 rounded-full bg-muted/30 border border-dashed border-border/50 mb-4">
                       <LayoutGrid className="h-16 w-16" />

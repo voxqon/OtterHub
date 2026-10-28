@@ -16,12 +16,10 @@ import {
   moveToTrash,
   toggleLike,
   uploadChunk,
+  completeChunkUpload,
+  getUploadChunkProgress,
 } from "@/lib/api";
-import {
-  MAX_CONCURRENTS,
-  binaryExtensions,
-  DIRECT_DOWNLOAD_LIMIT,
-} from "@/lib/types";
+import { binaryExtensions, DIRECT_DOWNLOAD_LIMIT } from "@/lib/types";
 import { toast } from "sonner";
 import { shouldBlur } from "@/lib/utils";
 import { FileItem, FileType, MAX_CHUNK_SIZE } from "@shared/types";
@@ -71,10 +69,12 @@ export function useFileCardActions(file: FileItem) {
 
   const handleDelete = () => {
     if (!confirm(`确定删除文件 ${file.metadata?.fileName} ?`)) return;
-    moveToTrash(file.name).then(() => {
-      moveToTrashLocal(file);
-      toast.success("已移入回收站");
-    });
+    moveToTrash(file.name)
+      .then(() => {
+        moveToTrashLocal(file);
+        toast.success("已移入回收站");
+      })
+      .catch(() => toast.error("移入回收站失败"));
   };
 
   const handleCopyLink = () => {
@@ -184,12 +184,14 @@ export function useFileCardActions(file: FileItem) {
   };
 
   const handleToggleLike = () => {
-    toggleLike(file.name).then(() => {
-      updateFileMetadata(file.name, {
-        ...file.metadata,
-        liked: !file.metadata.liked,
-      });
-    });
+    toggleLike(file.name)
+      .then(() => {
+        updateFileMetadata(file.name, {
+          ...file.metadata,
+          liked: !file.metadata.liked,
+        });
+      })
+      .catch(() => toast.error("收藏操作失败"));
   };
 
   const handleResumeUpload = () => {
@@ -211,13 +213,12 @@ export function useFileCardActions(file: FileItem) {
     }
 
     setIsResuming(true);
-    const chunkInfo = file.metadata.chunkInfo!;
-    const totalChunks = chunkInfo.total;
-
     try {
+      const progress = await getUploadChunkProgress(file.name);
+      const receipts = [...progress.receipts];
       const chunkIndicesToUpload = getMissingChunkIndices(
-        totalChunks,
-        chunkInfo.uploadedIndices
+        progress.total,
+        progress.uploadedIndices
       );
 
       await processBatch(
@@ -227,14 +228,15 @@ export function useFileCardActions(file: FileItem) {
           const endPos = Math.min(start + MAX_CHUNK_SIZE, selectedFile.size);
           const chunkFile = selectedFile.slice(start, endPos);
 
-          await uploadChunk(file.name, chunkIndex, chunkFile);
+          const result = await uploadChunk(file.name, chunkIndex, chunkFile);
+          receipts.push(result.receipt);
         },
         undefined,
-        MAX_CONCURRENTS
+        2
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      window.location.reload();
+      const metadata = await completeChunkUpload(file.name, receipts);
+      updateFileMetadata(file.name, metadata);
       toast.success(`上传成功`);
     } catch (error) {
       console.error("继续上传失败:", error);

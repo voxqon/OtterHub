@@ -1,6 +1,11 @@
 "use client";
 
-import { useActiveBucket, useFilteredFiles, useFileDataStore, useFileQueryStore } from "@/stores/file";
+import {
+  useActiveBucket,
+  useFilteredFiles,
+  useFileDataStore,
+  useFileQueryStore,
+} from "@/stores/file";
 import { useFileUIStore } from "@/stores/file";
 import { FileCard } from "@/components/file-card";
 import { ViewModeToggle } from "@/components/ViewModeToggle";
@@ -52,9 +57,16 @@ function FileViewRenderer({
 }
 
 export function FileGallery() {
-  const { viewMode, itemsPerPage, setItemsPerPage, currentPage, setCurrentPage } = useFileUIStore();
+  const {
+    viewMode,
+    itemsPerPage,
+    setItemsPerPage,
+    currentPage,
+    setCurrentPage,
+  } = useFileUIStore();
   const { fetchNextPage } = useFileDataStore();
-  const { searchQuery, filterLiked, filterTags, filterDateRange } = useFileQueryStore();
+  const { searchQuery, filterLiked, filterTags, filterDateRange } =
+    useFileQueryStore();
   const files = useFilteredFiles();
   const bucket = useActiveBucket();
 
@@ -62,6 +74,11 @@ export function FileGallery() {
   useEffect(() => {
     setCurrentPage(0);
   }, [searchQuery, filterLiked, filterTags, filterDateRange, setCurrentPage]);
+
+  useEffect(() => {
+    const lastPage = Math.max(0, Math.ceil(files.length / itemsPerPage) - 1);
+    if (currentPage > lastPage) setCurrentPage(lastPage);
+  }, [files.length, itemsPerPage, currentPage, setCurrentPage]);
 
   const handlePageChange = (selectedItem: { selected: number }) => {
     setCurrentPage(selectedItem.selected);
@@ -82,29 +99,33 @@ export function FileGallery() {
       maskOpacity={0.85}
       toolbarRender={(props) => <PhotoToolbar {...props} />}
     >
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2 text-sm text-foreground/50">
-          <span>{files.length} 个文件</span>
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-foreground/60 font-medium">
+          <span className="px-2.5 py-1 rounded-lg bg-secondary/30 border border-glass-border">
+            {files.length} 个文件
+          </span>
           {bucket.hasMore && (
             <Button
               onClick={fetchNextPage}
-              disabled={bucket.loading || bucket.error}
+              disabled={bucket.loading}
               variant="ghost"
               size="sm"
-              title={bucket.loading ? "加载中" : bucket.error ? "加载失败" : "加载更多"}
-              className="h-8 w-8 p-0 border-primary/30 text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={
+                bucket.loading ? "加载中" : bucket.error ? "重试" : "加载更多"
+              }
+              className="h-7 w-7 p-0 rounded-lg border border-primary/20 text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {bucket.loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : bucket.error ? (
-                <CircleAlert className="h-4 w-4" />
+                <CircleAlert className="h-3.5 w-3.5" />
               ) : (
-                <Ellipsis className="h-4 w-4" />
+                <Ellipsis className="h-3.5 w-3.5" />
               )}
             </Button>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <FilterDropdown />
           <SortTypeDropdown />
           <ViewModeToggle />

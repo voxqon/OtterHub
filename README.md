@@ -6,7 +6,7 @@
 <p align="center"><strong>Stash your files like an otter</strong></p>
 
 <p align="center">
-  基于 Cloudflare KV + Telegram Bot API 的免费私人云盘
+  基于 Cloudflare Pages + KV，支持 Telegram / R2 存储的私人云盘
 </p>
 
 <p align="center">
@@ -28,6 +28,8 @@
 > ```
 >
 > 未配置 `JWT_SECRET` 将无法登录。
+>
+> 启用 Telegram Webhook 导入时还必须配置 `TG_WEBHOOK_SECRET`；未配置时导入接口返回 503，错误或缺少校验头时返回 401。
 
 ---
 
@@ -47,7 +49,7 @@
 OtterHub 是一个 **为个人使用场景定制** 的私人云盘方案：
 
 - 基于 **Cloudflare Pages + KV**（最终一致性，上传后存在短暂同步延迟）
-- 使用 **Telegram Bot** 作为实际文件存储（本地开发使用 R2）
+- 配置 `TG_BOT_TOKEN` 时使用 **Telegram Bot** 存储，未配置时使用绑定的 **R2**
 - 通过 **分片上传** 突破 20MB 单文件限制
 - 支持 **HTTP Range**，适合视频 / 大文件访问
 - 架构克制、状态最小化，优先长期可维护性
@@ -68,10 +70,10 @@ OtterHub 是一个 **为个人使用场景定制** 的私人云盘方案：
 - **私人文件存储**：
   - 支持图片 / 音频 / 视频 / 文档
   - KV Key 按类型划分前缀 `img:` `audio:` `video:` `doc:`，提升查询效率
-  - 提供回收站功能（30天后自动清除），支持恢复和永久删除
+  - 提供回收站功能，记录保留 30 天，支持恢复和永久删除
 - **大文件支持**：
-  - 分片上传（≤20MB/片），已实测稳定上传并预览 **100MB** 文件，理论最大 1GB
-  - 支持 HTTP Range，视频/音频按需加载，支持断点续传
+  - 分片上传，每片最多 **20 MiB**，最多 50 片，单文件上限 **1000 MiB**
+  - 支持 HTTP Range，视频/音频按需加载；中断上传可重新选择原文件续传
 - **实时预览**：
   - 通过文件 URL 直接打开，无需下载
   - 支持：图片 / 音频 / 视频 / 文本（txt、pdf 等）
@@ -80,10 +82,15 @@ OtterHub 是一个 **为个人使用场景定制** 的私人云盘方案：
   - 图片加载策略：默认 / 省流（>5MB 不加载）/ 无图
 - **安全与私密**：
   - 密码登录（基于 JWT + Cookie）
+  - 管理接口始终鉴权；`private` 文件和回收站内容需要管理员身份访问
+  - 临时分享支持到期、撤销和私有文件授权访问，分享响应不缓存
   - NSFW 图片客户端检测（nsfw.js），安全模式下自动遮罩
 - **基础管理功能**：批量下载 / 删除，搜索 / 收藏 / 排序 / 标签
 - **Telegram 频道上传**：频道 / 群内发送 ≤20MB 文件后自动注册到 OtterHub，并可回复直链
 - **AI 图片分析**：网页端上传图片后可自动生成简要描述，便于图片检索（需配置 Workers AI binding，可在设置页关闭）
+- **公共上传接口**：独立 HMAC-SHA256 密钥，只授权上传，不开放文件管理能力；见[公共上传接口文档](docs/public-api.md)
+
+> 默认上传文件可通过直链公开访问。需要私密存储时，请在设置中将 `private` 设为默认上传标签，或编辑文件标签。回收站记录过期只会清理 KV 索引；Telegram 原消息、未完成上传产生的存储对象，以及过期回收站对应的 R2 对象没有定时清理任务。
 
 ---
 
@@ -91,7 +98,7 @@ OtterHub 是一个 **为个人使用场景定制** 的私人云盘方案：
 
 ### 前置要求
 
-- Node.js 18+
+- Node.js 20.9+
 - Cloudflare 账号（免费，部署需要）
 - Telegram Bot Token（生产默认存储需要；本地开发默认不需要）
 
@@ -104,27 +111,41 @@ OtterHub 是一个 **为个人使用场景定制** 的私人云盘方案：
    npm install
    ```
 
-2. **启动项目**
+2. **构建静态资源并启动项目**
 
    ```bash
+   npm run build
    npm run dev
    ```
 
-   > 第一次启动需要构建前端 `npm run build`（生成 `frontend/out` 供 Wrangler Pages Dev 使用），后续启动直接 `npm run dev` 即可。
+   > 首次构建生成 `frontend/out`，供 Wrangler Pages Dev 使用。后续前端开发由 Next.js 热更新，通常直接运行 `npm run dev`。Windows 下执行新的生产构建前，请先停止使用 `frontend/out` 的本地服务，避免目录被锁定。
 
 3. **访问网站**
    - 前端：`http://localhost:3000`
-   - 后端：`http://localhost:8788` (由 Wrangler 代理)
+   - 后端：`http://localhost:8788`
+
+`frontend/.env.development` 提供开发环境的后端地址。需要修改端口或使用独立后端时，在 `frontend/.env.development.local` 设置 `NEXT_PUBLIC_BACKEND_URL`；修改后重启前端。生产环境默认请求当前站点，仅在确实需要独立后端时设置此构建变量。
 
 > [!TIP]
 > 开发环境下密码为`123456`，且采用本地 R2 存储，可以直接上传文件，方便调试。
 
 ### 提交前检查
 
-项目使用 Husky + lint-staged 管理本地检查：
+常用检查命令：
 
-- commit 前：对 staged 文件运行 Prettier，并执行 `npm run typecheck`
-- push 前：执行 `npm run build` 和 `npm run ci-test`
+```bash
+npm run lint         # 前端 ESLint
+npm run typecheck    # 检查前端、共享代码及前端引用的后端类型
+npm test             # 逻辑与公共上传 API 回归，无需启动 Wrangler
+npm run build        # 类型检查及静态导出
+npm run ci-test      # 启动本地 Wrangler，运行全部 Mocha 测试后停止服务
+```
+
+提交前的 Husky 钩子会对暂存文件运行 Prettier，并执行 `npm run typecheck`。GitHub Actions 会运行 lint、类型检查、构建和 `ci-test`；仓库没有 push 前钩子。
+
+`ci-test` 使用 8788 端口和本地 `data` 目录，运行前请停止占用该端口的开发后端；应在测试用数据目录中运行。已有测试服务时，可用 `TEST_API_URL` 指定地址，直接运行 `npx mocha test/test.js --timeout 15000`。
+
+`npm run test:optimization` 仅运行逻辑回归。默认测试会跳过 Telegram HTTP 模拟组；设置 `TG_SIM_URL` 后可运行该组，具体命令与验证范围见[模拟测试记录](postman/simulations/otterhub-storage.context.md)和[上传协议](docs/upload-protocol.md)。模拟通过不代表真实 Telegram 或跨地区 KV 一致性已验证。
 
 ---
 
@@ -154,6 +175,10 @@ TG_WEBHOOK_SECRET=your_secret   # 自定义 Webhook 校验密钥，建议 32 位
 
 > `TG_CHAT_ID` 和 `TG_BOT_TOKEN` 需在 Telegram 中获取。
 > 💡 详细流程可参考：[Telegraph-Image](https://github.com/cf-pages/Telegraph-Image)
+
+`PASSWORD` 用于网页登录，`JWT_SECRET` 用于登录会话及分片确认凭据，两者用途不同。`API_TOKEN` 具有管理权限，应保存在可信服务端。公共上传密钥通过设置页生成并保存在 KV，无需额外环境变量。
+
+若使用 R2，请不配置 `TG_BOT_TOKEN`，并绑定 R2 bucket，变量名为 `oh_file_r2`。R2 和 Telegram 共用 KV 元数据索引；切换存储不会迁移已有文件内容，需自行迁移数据。
 
 <details>
 <summary>从 Telegram 频道/群组上传文件</summary>
@@ -219,21 +244,20 @@ curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo"
 1. **初始化上传**
    - 前端发送 `POST /upload/chunk/init` 请求
    - 以 JSON 携带文件类型、名称、大小、总分片数和默认标签
-   - 后端创建最终 KV，返回唯一文件 key
+   - 后端校验文件大小与分片数量，创建保留 1 小时的临时元数据，返回唯一文件 key
 
-2. **分片上传**
+2. **分片上传与确认**
    - 前端将文件分片（每片 ≤ 20MB）
    - 携带 key 逐个发送 `POST /upload/chunk`
-   - 后端将分片暂存到临时 KV（TTL = 1 小时，value ≤ 25MB）
+   - 新客户端携带 `returnReceipt=true`，后端直接上传到目标存储
+   - 上传成功后返回签名确认凭据，每片独立保存进度，避免并发覆盖
+   - 无需将分片二进制内容写入、读出临时 KV
 
-3. **异步上传到 Telegram**
-   - 使用 `waitUntil` 异步上传分片到 Telegram
-   - 上传成功后获取 file_id
-
-4. **合并完成**
-   - 将 file_id 存入最终 KV 的 chunks 数组
-   - 更新 uploadedIndices 元数据
-   - 删除临时 KV
+3. **提交完成**
+   - 前端携带全部凭据发送 `POST /upload/chunk/complete`
+   - 后端校验分片完整性、大小与签名后，一次写入最终清单
+   - 响应中返回完整元数据，界面立即更新，无需轮询进度或刷新页面
+   - 续传时仅查询一次已确认的分片进度
 
 ### 文件下载
 
@@ -248,9 +272,10 @@ curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo"
    - 支持 HTTP Range 请求
    - 边拉取边返回给客户端
 
-3. **断点续传**
+3. **按范围下载**
    - 支持 Range 请求头
-   - 可指定下载指定字节范围
+   - 支持普通范围、开放结束范围和后缀范围，例如 `bytes=0-99`、`bytes=100-`、`bytes=-100`
+   - 合法范围返回 206，无法满足或不支持的多范围请求返回 416
 
 ### 数据存储结构
 
@@ -268,7 +293,7 @@ curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo"
     "liked": false,
     "chunkInfo": {
       "total": 2,
-      "uploadedIndices": [1, 0]
+      "uploadedIndices": [0, 1]
     }
   }
 }
@@ -279,25 +304,35 @@ curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo"
 ```json
 [
   {
-    "idx": 1,
-    "file_id": "BQACAgUAAyEGAASJIjr1AAIDa2lictGSBOJ24LnypIN5JCmV2u77AAJ_HwAC...",
-    "size": 9230987
-  },
-  {
     "idx": 0,
     "file_id": "BQACAgUAAyEGAASJIjr1AAIDbGlictIJ9om0qQ66ZW4GssRXCARUAAKAHwAC...",
     "size": 20971520
+  },
+  {
+    "idx": 1,
+    "file_id": "BQACAgUAAyEGAASJIjr1AAIDa2lictGSBOJ24LnypIN5JCmV2u77AAJ_HwAC...",
+    "size": 9230987
   }
 ]
 ```
 
-#### 存储容量分析
+KV 保存文件索引、元数据、分享记录、设置和临时分片确认记录。实际占用取决于文件名、标签、描述和分片数量，不能按固定的单文件字节数推算容量；文件二进制内容保存在 Telegram 或 R2。
 
-- **单文件占用**：< 500 字节（key + metadata + value 结构）
-- **KV 总容量**：1GB（免费版）
-- **理论存储数量**： **≥ 200万个**
+### 访问、分享与回收站
 
-> 计算公式：`1GB / 500字节 ≈ 200万`
+| 入口                                                                    | 访问要求                                                         |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| 文件列表、上传、编辑、删除、回收站管理、系统设置                        | 管理员 Cookie 或 `Authorization: Bearer <API_TOKEN>`             |
+| `/file/:key`、`/file/:key/download`                                     | 普通文件允许直链访问；`private` 文件及回收站文件必须管理员鉴权   |
+| `/share/:token/meta`、`/share/:token/raw`、`/share/:token/download-all` | 有效分享令牌；可临时访问已分享的私有文件                         |
+| `POST /public/upload`                                                   | 独立公共上传密钥签名，详见[公共上传接口文档](docs/public-api.md) |
+| `POST /telegram/webhook`                                                | 已配置 `TG_WEBHOOK_SECRET`，且校验头匹配                         |
+
+创建分享使用 `POST /share/create`。`expireIn` 为至少 60 秒的整数，省略时创建永久分享；单文件用 `fileKey`，打包分享用 `type: "bundle"` 和 `fileKeys`。分享列表会遍历 KV 分页并过滤过期记录，ZIP 打包下载最多支持 50 个文件。
+
+分享元数据与内容响应均设为 `private, no-store`。到期后返回 404；撤销会删除 KV 分享记录，跨地区生效时间仍受 KV 最终一致性影响。已经下载的文件无法撤回。
+
+移入回收站只改变 KV 索引，恢复会移除回收站前缀并取消过期时间。R2 手动永久删除会删除原始对象或分片；Telegram 模式只删除索引，不会删除 Telegram 中的原消息。
 
 ---
 
@@ -306,10 +341,12 @@ curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo"
 <details>
 <summary>1. 上传完成后立即查看，为什么文件不完整？</summary>
 
-上传过程使用了 `waitUntil` 进行异步处理，
-在分片尚未全部上传完成前，文件可能暂时显示不完整。
+新版网页会等待所有分片上传确认并提交完整清单，再显示成功。
+上传中断的文件可以选择原文件继续上传，不必重传已经确认的分片。
 
-通常只需 **稍等片刻并刷新页面** 即可正常显示。
+Cloudflare KV 跨地区仍采用最终一致性，因此其他设备可能短暂看到旧列表；
+返回页面、网络恢复或切换文件类型时会按需同步。仍使用旧版异步上传接口的
+客户端，需要查询 `/upload/chunk/progress` 完成进度确认。
 
 </details>
 
@@ -323,15 +360,14 @@ curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getWebhookInfo"
 - 服务端记录分片 `file_id`
 - 下载时按顺序流式拉取并合并
 
-👉 当前最大支持 **1GB 文件（50 × 20MB）**。
+👉 当前代码上限为 **1000 MiB（50 × 20 MiB，约 0.98 GiB）**，实际上传仍受部署环境资源和上游可用性影响。
 
 </details>
 
 <details>
 <summary>3. Cloudflare Workers 免费版是否够用？</summary>
 
-对于**个人存储场景**通常足够，**理论存储数量**： **≥ 200万个**
-但大文件上传会占用较多内存和CPU资源，**不建议并发上传多个大文件**。
+取决于请求量、KV 读写次数、文件大小和存储模式。浏览器上传队列在不同文件间共享两个上传槽；下载按需读取分片，取消下载会停止后续读取。请按实际使用量检查 Cloudflare 与 Telegram 的服务额度。
 
 > 具体限制参考官方文档：https://developers.cloudflare.com/workers/platform/limits/
 
@@ -382,7 +418,9 @@ OtterHub/
 │   ├── app.ts          # Hono App 定义 & AppType 导出
 │   └── [[path]].ts     # Pages Functions 入口
 ├── shared/             # 前后端共享类型/工具 (Workspaces)
-├── test/               # 基础端到端测试 (mocha)
+├── docs/               # 上传协议、公共上传 API 说明
+├── postman/            # Telegram 契约、HTTP 模拟与验证记录
+├── test/               # 逻辑回归、公共 API 与 Wrangler KV/R2 集成测试
 ├── public/             # 静态资源
 ├── package.json        # Monorepo 配置
 ├── wrangler.jsonc      # Wrangler 配置（本地开发/静态资源）
@@ -404,7 +442,7 @@ OtterHub/
 
 - [x] 核心能力
   - [x] 基于 Cookie 实现密码登录、登出功能
-  - [x] 分片上传（≤20MB / 片），支持大文件（已实测 100MB，理论 1GB）
+  - [x] 分片上传（≤20 MiB / 片），确认凭据完成提交，最大 1000 MiB
   - [x] Telegram 频道 / 群上传导入（Webhook 注册 ≤20MB 文件的 `file_id`）
   - [x] HTTP Range 支持（视频 / 音频按需加载、断点续传）
   - [x] Private 私有文件访问控制
@@ -439,11 +477,11 @@ OtterHub/
 
 - [x] 随机壁纸获取（Wallhaven、Bing、Pixabay 等）
 - [x] API Token 支持 (通过 `API_TOKEN` 环境变量配置)
+- [x] 公共上传 API（HMAC-SHA256 签名，独立密钥生成、轮换与停用）
 - [ ] 申请 TG API ID，自建 Telegram Bot API Server, 单个文件下载上限可提升至 2GB
 - [ ] ~~TG Webhook 上传同步文件标签~~（会额外消耗一次 KV 读取额度）
 
 - [ ] KV vs D1 数据库评估
-  - D1：单库 500MB，分库可达 5GB
   - 优点：SQL、关系模型、文件夹结构更自然
   - 当前结论：KV 足够，暂不迁移
 - [ ] ~~文件夹系统~~ （已通过「文件名前缀 + 搜索 + Tag」实现等效能力）

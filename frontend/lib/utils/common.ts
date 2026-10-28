@@ -28,6 +28,24 @@ export function openExternalLink(url: string) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
+export function getSafeRedirectPath(
+  redirect: string | null,
+  origin: string
+): string {
+  try {
+    const url = new URL(redirect || "/", origin);
+    if (
+      url.origin !== new URL(origin).origin ||
+      url.pathname.startsWith("//")
+    ) {
+      return "/";
+    }
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "/";
+  }
+}
+
 /**
  * 简单重试工具
  * @param fn 要执行的异步函数
@@ -47,7 +65,7 @@ export async function retry<T>(
     } catch (e) {
       lastError = e;
       if (i === retry) break;
-      await new Promise(r => setTimeout(r, delay));
+      await new Promise((r) => setTimeout(r, delay));
     }
   }
 
@@ -61,7 +79,7 @@ export async function retry<T>(
  * @param items 要处理的数组
  * @param fn 处理单个项目的函数（支持异步）
  * @param onProgress 进度回调 (current, total) => void
- * @param batchSize 每批处理数量，默认 50 
+ * @param batchSize 每批处理数量，默认 50
  * @param interval 批次间隔(ms)，默认 0 (利用事件循环释放主线程)
  */
 export async function processBatch<T>(
@@ -76,15 +94,15 @@ export async function processBatch<T>(
 
   for (let i = 0; i < total; i += batchSize) {
     const chunk = items.slice(i, i + batchSize);
-    
+
     // 处理当前批次
-    await Promise.all(chunk.map(item => fn(item)));
-    
+    await Promise.all(chunk.map((item) => fn(item)));
+
     // 更新进度
     const current = Math.min(i + batchSize, total);
     onProgress?.(current, total);
-    
+
     // 释放主线程
-    await new Promise(resolve => setTimeout(resolve, interval));
+    await new Promise((resolve) => setTimeout(resolve, interval));
   }
 }

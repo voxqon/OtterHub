@@ -4,19 +4,30 @@ import {
   getFileTypeByMimeOrExt,
 } from "../file";
 import { FileType } from "@shared/types";
+import { getTextFromCache, putTextToCache } from "../cache";
+
+const pendingPaths = new Map<string, Promise<string | null>>();
 
 /**
  * 构建 Telegram API URL
  */
-export function buildTgApiUrl(botToken: string, endpoint: string): string {
-  return `https://api.telegram.org/bot${botToken}/${endpoint}`;
+export function buildTgApiUrl(
+  botToken: string,
+  endpoint: string,
+  baseUrl = "https://api.telegram.org"
+): string {
+  return `${baseUrl.replace(/\/$/, "")}/bot${botToken}/${endpoint}`;
 }
 
 /**
  * 构建 Telegram 文件 URL
  */
-export function buildTgFileUrl(botToken: string, filePath: string): string {
-  return `https://api.telegram.org/file/bot${botToken}/${filePath}`;
+export function buildTgFileUrl(
+  botToken: string,
+  filePath: string,
+  baseUrl = "https://api.telegram.org"
+): string {
+  return `${baseUrl.replace(/\/$/, "")}/file/bot${botToken}/${filePath}`;
 }
 
 /**
@@ -27,15 +38,57 @@ export function buildTgFileUrl(botToken: string, filePath: string): string {
  */
 export async function getTgFilePath(
   fileId: string,
-  botToken: string
+  botToken: string,
+  forceRefresh = false,
+  baseUrl = "https://api.telegram.org"
 ): Promise<string | null> {
-  const url = buildTgApiUrl(botToken, "getFile");
-  const res = await fetch(`${url}?file_id=${fileId}`);
-
-  if (!res.ok) return null;
-
-  const data = await res.json();
-  return data?.ok ? data.result.file_path : null;
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`${baseUrl}:${botToken}`)
+  );
+  const scope = Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
+  const cacheKey = `${scope}:${fileId}`;
+  const pendingKey = `${cacheKey}:${forceRefresh}`;
+  let pending = pendingPaths.get(pendingKey);
+  if (!pending) {
+    pending = (async () => {
+      if (!forceRefresh) {
+        try {
+          const cached = await getTextFromCache("tgpath", cacheKey);
+          if (cached) return cached;
+        } catch {
+          /* Cache failures must not prevent downloads. */
+        }
+      }
+      const url = buildTgApiUrl(botToken, "getFile", baseUrl);
+      const res = await fetch(
+        `${url}?${new URLSearchParams({ file_id: fileId })}`,
+        {
+          signal: AbortSignal.timeout(15_000),
+        }
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      const path = data?.ok ? (data.result.file_path as string) : null;
+      if (path) {
+        try {
+          await putTextToCache("tgpath", cacheKey, path, 3300);
+        } catch {
+          /* The upstream path is usable even if caching fails. */
+        }
+      }
+      return path;
+    })();
+    pendingPaths.set(pendingKey, pending);
+    const clear = () => {
+      if (pendingPaths.get(pendingKey) === pending)
+        pendingPaths.delete(pendingKey);
+    };
+    void pending.then(clear, clear);
+  }
+  return pending;
 }
 
 /**

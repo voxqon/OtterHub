@@ -8,7 +8,6 @@ interface SettingsUIState {
   setActiveSettingTab: (tab: string) => void;
 }
 
-// TODO: 
 export const useUIStore = create<SettingsUIState>()(
   persist(
     (set) => ({

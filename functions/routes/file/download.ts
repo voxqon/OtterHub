@@ -15,12 +15,12 @@ downloadRoutes.get("/:key/download", async (c) => {
   }
 
   const { db, item, isPrivate } = access;
-  const resp = await db.get(key, c.req.raw);
+  const resp = await db.get(key, c.req.raw, item);
   const headers = new Headers(resp.headers);
 
   headers.set(
     "Content-Disposition",
-    encodeContentDisposition(item.metadata.fileName, false),
+    encodeContentDisposition(item.metadata.fileName, false)
   );
   headers.set("Cache-Control", "private, no-store, max-age=0");
 

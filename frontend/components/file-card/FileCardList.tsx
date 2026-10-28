@@ -52,30 +52,30 @@ export function FileCardList({ file, actions }: FileCardListProps) {
     <>
       <div
         className={cn(
-          "group flex items-center gap-4 px-4 py-3 rounded-md backdrop-blur-xl border transition-all cursor-pointer",
+          "group flex items-center gap-4 px-4 py-3 rounded-xl backdrop-blur-xl border transition-all duration-200 cursor-pointer shadow-xs",
           isSelected
-            ? "bg-primary/20 border-primary/50"
-            : "bg-glass-bg border-glass-border hover:border-primary/30 hover:bg-secondary/20",
+            ? "bg-primary/20 border-primary shadow-sm shadow-primary/10"
+            : "bg-card/40 border-glass-border hover:border-primary/40 hover:bg-card/70 hover:shadow-sm",
         )}
         onClick={handleSelect}
       >
         {/* File Icon */}
-        <div className="flex items-center justify-center shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center justify-center shrink-0 w-9 h-9 rounded-lg bg-secondary/50 border border-glass-border/60 group-hover:scale-105 transition-transform">
           {getFileIcon()}
         </div>
 
         {/* File Info */}
-        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-          <p className={cn("text-sm font-medium truncate leading-tight transition-all duration-300", blur && "blur-xs select-none opacity-80")} title={file.metadata?.fileName}>
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          <p className={cn("text-sm font-semibold truncate leading-tight transition-all duration-300 text-foreground", blur && "blur-xs select-none opacity-80")} title={file.metadata?.fileName}>
             {file.metadata?.fileName}
           </p>
           <div className="flex items-center gap-2 text-[11px] text-foreground/50 leading-none">
-            <span className="shrink-0">{formatFileSize(file.metadata?.fileSize || 0)}</span>
-            <span className="text-foreground/20">•</span>
+            <span className="shrink-0 font-medium">{formatFileSize(file.metadata?.fileSize || 0)}</span>
+            <span className="text-foreground/30">•</span>
             <span className="shrink-0 truncate">{formatTime(file.metadata?.uploadedAt || 0)}</span>
             {tags.length > 0 && (
               <>
-                <span className="text-foreground/20">•</span>
+                <span className="text-foreground/30">•</span>
                 <div className="flex gap-1 overflow-hidden">
                   {tags.map((tag) => (
                     <FileTagBadge key={tag} tag={tag} />
@@ -97,7 +97,7 @@ export function FileCardList({ file, actions }: FileCardListProps) {
             }}
             disabled={isResuming}
             title="继续上传"
-            className="h-8 text-amber-300 border-amber-500/80 hover:bg-amber-500/50 shrink-0 px-2"
+            className="h-7 text-amber-300 border-amber-500/80 hover:bg-amber-500/50 shrink-0 px-2 rounded-lg text-xs"
           >
             {isResuming ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -13,21 +13,20 @@ export function ViewModeToggle() {
   const activeType = useFileDataStore((state) => state.activeType)
 
   return (
-    <div className="flex items-center gap-1 p-1 rounded-lg bg-glass-bg border border-glass-border">
+    <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary/30 border border-glass-border/70 backdrop-blur-md">
       {activeType === FileType.Image && (
-        // TODO: 修改Button的按钮模板，避免到处调整样式
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setViewMode(ViewMode.Masonry)}
           className={cn(
-            "h-8 px-3",
+            "h-7.5 px-2.5 rounded-lg transition-all duration-200",
             viewMode === ViewMode.Masonry
-              ? "bg-primary/20 text-primary hover:bg-primary/30"
-              : "text-foreground/60 hover:text-foreground hover:bg-secondary/50",
+              ? "bg-primary text-primary-foreground shadow-xs shadow-primary/25 hover:bg-primary/90 hover:text-primary-foreground"
+              : "text-foreground/60 hover:text-foreground hover:bg-secondary/60",
           )}
         >
-          <LayoutTemplate className="h-4 w-4" />
+          <LayoutTemplate className="h-3.5 w-3.5" />
         </Button>
       )}
       <Button
@@ -35,13 +34,13 @@ export function ViewModeToggle() {
         size="sm"
         onClick={() => setViewMode(ViewMode.Grid)}
         className={cn(
-          "h-8 px-3",
+          "h-7.5 px-2.5 rounded-lg transition-all duration-200",
           viewMode === ViewMode.Grid
-            ? "bg-primary/20 text-primary hover:bg-primary/30"
-            : "text-foreground/60 hover:text-foreground hover:bg-secondary/50",
+            ? "bg-primary text-primary-foreground shadow-xs shadow-primary/25 hover:bg-primary/90 hover:text-primary-foreground"
+            : "text-foreground/60 hover:text-foreground hover:bg-secondary/60",
         )}
       >
-        <Grid3x3 className="h-4 w-4" />
+        <Grid3x3 className="h-3.5 w-3.5" />
       </Button>
 
       <Button
@@ -49,13 +48,13 @@ export function ViewModeToggle() {
         size="sm"
         onClick={() => setViewMode(ViewMode.List)}
         className={cn(
-          "h-8 px-3",
+          "h-7.5 px-2.5 rounded-lg transition-all duration-200",
           viewMode === ViewMode.List
-            ? "bg-primary/20 text-primary hover:bg-primary/30"
-            : "text-foreground/60 hover:text-foreground hover:bg-secondary/50",
+            ? "bg-primary text-primary-foreground shadow-xs shadow-primary/25 hover:bg-primary/90 hover:text-primary-foreground"
+            : "text-foreground/60 hover:text-foreground hover:bg-secondary/60",
         )}
       >
-        <List className="h-4 w-4" />
+        <List className="h-3.5 w-3.5" />
       </Button>
     </div>
   )

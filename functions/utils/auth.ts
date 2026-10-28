@@ -3,7 +3,7 @@ import { SignJWT, jwtVerify } from "jose";
 const encoder = new TextEncoder();
 
 export async function signJWT(secret: string) {
-  return new SignJWT({ sub: "admin" })  
+  return new SignJWT({ sub: "admin" })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d") //  过期时间设置为7天
@@ -11,5 +11,8 @@ export async function signJWT(secret: string) {
 }
 
 export async function verifyJWT(token: string, secret: string) {
-  return jwtVerify(token, encoder.encode(secret));
+  return jwtVerify(token, encoder.encode(secret), {
+    algorithms: ["HS256"],
+    subject: "admin",
+  });
 }

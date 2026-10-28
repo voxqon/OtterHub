@@ -153,19 +153,19 @@ export function Header() {
 
   // 桌面端头部导航栏
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-glass-border bg-glass-bg/70 backdrop-blur-xl">
-      <div className="flex h-20 items-center justify-between px-6 md:px-8">
+    <header className="sticky top-0 z-40 w-full border-b border-glass-border bg-glass-bg/85 backdrop-blur-2xl shadow-xs transition-all">
+      <div className="max-w-7xl mx-auto flex h-18 items-center justify-between px-4 sm:px-6 md:px-8">
         {/* Left: Logo */}
         <div
-          className="flex items-center gap-4 group cursor-pointer shrink-0"
+          className="flex items-center gap-3.5 group cursor-pointer shrink-0 select-none"
           title="返回顶部"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br from-primary to-accent text-2xl shadow-xl shadow-primary/20 transition-transform group-hover:scale-110">
-            🦦
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-linear-to-tr from-primary via-emerald-400 to-teal-300 text-2xl shadow-md shadow-primary/25 transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/40 group-active:scale-95">
+            <span className="drop-shadow-xs">🦦</span>
           </div>
-          <div className="hidden lg:block">
-            <h1 className="text-xl font-black tracking-tighter text-foreground leading-none">
+          <div className="hidden lg:flex flex-col">
+            <h1 className="text-lg font-extrabold tracking-tight text-foreground leading-tight bg-linear-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text">
               {APP_NAME}
             </h1>
           </div>
@@ -179,25 +179,25 @@ export function Header() {
         {/* Right: Actions */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="relative group hidden lg:block">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/30 group-focus-within:text-primary transition-colors" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-foreground/40 group-focus-within:text-primary transition-colors" />
             <Input
               placeholder="搜索文件..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 w-54 rounded-xl border-glass-border bg-secondary/20 pl-10 pr-10 text-sm focus-visible:ring-primary/40 placeholder:text-foreground/80"
+              className="h-9.5 w-56 rounded-xl border-glass-border bg-secondary/35 pl-9.5 pr-9 text-sm focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:bg-secondary/60 placeholder:text-foreground/45 transition-all duration-200"
             />
             {searchQuery && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-foreground/30 hover:text-foreground"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7.5 w-7.5 text-foreground/40 hover:text-foreground rounded-lg"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
-          <div className="flex items-center gap-1.5 rounded-2xl bg-secondary/10 p-1.5 border border-glass-border">
+          <div className="flex items-center gap-1 rounded-xl bg-secondary/25 p-1 border border-glass-border/70 backdrop-blur-md">
             <SafeModeToggle />
             <ImageLoadModeToggle />
             <ThemeToggle />

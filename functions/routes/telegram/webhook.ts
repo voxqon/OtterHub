@@ -35,11 +35,12 @@ telegramWebhookRoutes.post("/webhook", async (c) => {
   }
 
   const expectedSecret = c.env.TG_WEBHOOK_SECRET;
-  if (expectedSecret) {
-    const headerSecret = c.req.header("X-Telegram-Bot-Api-Secret-Token") || "";
-    if (headerSecret !== expectedSecret) {
-      return fail(c, "Invalid webhook secret", 401);
-    }
+  if (!expectedSecret) {
+    return fail(c, "TG_WEBHOOK_SECRET is not configured", 503);
+  }
+  const headerSecret = c.req.header("X-Telegram-Bot-Api-Secret-Token") || "";
+  if (headerSecret !== expectedSecret) {
+    return fail(c, "Invalid webhook secret", 401);
   }
 
   const update = await c.req.json().catch(() => null);

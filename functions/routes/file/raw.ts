@@ -1,25 +1,28 @@
-import { Hono } from 'hono';
-import { getFromCache, putToCache } from '@utils/cache';
-import type { Env } from '../../types/hono';
-import { fail } from '@utils/response';
-import { getAuthorizedFileAccess } from './access';
+import { Hono } from "hono";
+import { getFromCache, putToCache } from "@utils/cache";
+import type { Env } from "../../types/hono";
+import { fail } from "@utils/response";
+import { getAuthorizedFileAccess } from "./access";
 
 export const rawRoutes = new Hono<{ Bindings: Env }>();
 
-rawRoutes.get('/:key', async (c) => {
-  const key = c.req.param('key');
+rawRoutes.get("/:key", async (c) => {
+  const key = c.req.param("key");
   const access = await getAuthorizedFileAccess(c.env, c.req.raw, key);
 
   if (access instanceof Response) {
     return access;
   }
 
-  const { db, isPrivate } = access;
+  const { db, item, isPrivate } = access;
 
   try {
     // Range 请求：明确不缓存
-    if (c.req.header('Range')) {
-      return await db.get(key, c.req.raw);
+    if (c.req.header("Range")) {
+      const resp = await db.get(key, c.req.raw, item);
+      if (isPrivate)
+        resp.headers.set("Cache-Control", "private, no-store, max-age=0");
+      return resp;
     }
 
     // Only check cache for public files
@@ -28,7 +31,7 @@ rawRoutes.get('/:key', async (c) => {
       if (cached) return cached;
     }
 
-    const resp = await db.get(key, c.req.raw);
+    const resp = await db.get(key, c.req.raw, item);
 
     // Only cache public files
     if (!isPrivate) {
@@ -42,7 +45,7 @@ rawRoutes.get('/:key', async (c) => {
 
     return resp;
   } catch (error: any) {
-    console.error('Fetch raw file error:', error);
+    console.error("Fetch raw file error:", error);
     return fail(c, error.message);
   }
 });

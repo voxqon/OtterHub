@@ -80,10 +80,10 @@ export function Pagination({
       {hasMore && (
         <Button
           onClick={onLoadMore}
-          disabled={loading || error}
+          disabled={loading}
           variant="ghost"
           size="sm"
-          title={loading ? "加载中" : error ? "加载失败" : "加载更多"}
+          title={loading ? "加载中" : error ? "重试" : "加载更多"}
           className="h-9 min-w-[36px] px-3 border-primary/30 text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
@@ -97,18 +97,18 @@ export function Pagination({
       )}
 
       <>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-foreground/50">每页</span>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-secondary/30 border border-glass-border">
+          <span className="text-xs text-foreground/50">每页</span>
           <Select
             value={itemsPerPage.toString()}
             onValueChange={(value) => onItemsPerPageChange(Number(value))}
           >
-            <SelectTrigger className="h-8 w-20 bg-secondary/30 border-glass-border text-foreground/80">
+            <SelectTrigger className="h-7 w-16 bg-transparent border-0 text-foreground/80 text-xs shadow-none focus:ring-0">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-xl">
               {ITEMS_PER_PAGE_OPTIONS.map((size) => (
-                <SelectItem key={size} value={size.toString()}>
+                <SelectItem key={size} value={size.toString()} className="text-xs">
                   {size}
                 </SelectItem>
               ))}
@@ -116,9 +116,9 @@ export function Pagination({
           </Select>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-foreground/50">
+        <div className="flex items-center gap-1.5 text-xs text-foreground/50">
           <span>共</span>
-          <span className="text-primary font-medium">{totalItems}</span>
+          <span className="text-primary font-semibold">{totalItems}</span>
           <span>个文件</span>
         </div>
       </>

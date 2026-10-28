@@ -1,5 +1,6 @@
 import { BaseAdapter } from "./base-adapter";
-import { getTextFromCache, putTextToCache } from "@utils/cache";
+import type { FileRecord } from ".";
+import { createChunkStream } from "./chunk-stream";
 import { failResponse } from "@utils/response";
 import { encodeContentDisposition } from "../common";
 import { buildKeyId, getFileIdFromKey, getContentTypeByExt } from "../file";
@@ -39,34 +40,22 @@ export class TGAdapter extends BaseAdapter {
     super(env, kvName);
   }
 
-  private async getCachedTgFilePath(fileId: string, forceRefresh: boolean = false): Promise<string | null> {
-    if (!forceRefresh) {
-      try {
-        const cachedPath = await getTextFromCache("tgpath", fileId);
-        if (cachedPath) {
-          return cachedPath;
-        }
-      } catch (error) {
-        console.warn(`[TGAdapter] Cache read failed for fileId: ${fileId}`, error);
-      }
-    }
-
-    const filePath = await getTgFilePath(fileId, this.env.TG_BOT_TOKEN);
-    if (!filePath) return null;
-
-    try {
-      await putTextToCache("tgpath", fileId, filePath, 3300);
-    } catch (error) {
-      console.warn(`[TGAdapter] Cache write failed for fileId: ${fileId}`, error);
-    }
-
-    return filePath;
+  private async getCachedTgFilePath(
+    fileId: string,
+    forceRefresh: boolean = false
+  ): Promise<string | null> {
+    return getTgFilePath(
+      fileId,
+      this.env.TG_BOT_TOKEN,
+      forceRefresh,
+      this.env.TG_API_BASE_URL
+    );
   }
 
   async uploadFile(
     file: File | Blob | Uint8Array,
     metadata: FileMetadata,
-    waitUntil?: (p: Promise<any>) => void,
+    waitUntil?: (p: Promise<any>) => void
   ): Promise<{ key: string }> {
     if (metadata.fileSize > MAX_CHUNK_SIZE) {
       throw new Error(`File size exceeds ${MAX_CHUNK_SIZE}MB`);
@@ -81,7 +70,9 @@ export class TGAdapter extends BaseAdapter {
     } else {
       const extension = fileName.split(".").pop()?.toLowerCase() || "";
       const contentType = getContentTypeByExt(extension);
-      finalFile = new File([file as unknown as BlobPart], fileName, { type: contentType });
+      finalFile = new File([file as unknown as BlobPart], fileName, {
+        type: contentType,
+      });
     }
 
     const { file: processedFile, fileName: processedFileName } =
@@ -89,7 +80,7 @@ export class TGAdapter extends BaseAdapter {
 
     const { apiEndpoint, field, fileType, ext } = resolveFileDescriptor(
       processedFile,
-      processedFileName,
+      processedFileName
     );
 
     const formData = new FormData();
@@ -136,26 +127,46 @@ export class TGAdapter extends BaseAdapter {
     }
 
     // 图片上传成功后根据全局设置决定是否异步触发 AI 分析，优先使用 Telegram 返回的小图
-    if (kv && fileType === FileType.Image && isSupportedImage(processedFile.type, processedFileName)) {
+    if (
+      kv &&
+      this.env.AI &&
+      fileType === FileType.Image &&
+      isSupportedImage(processedFile.type, processedFileName)
+    ) {
       let enableImageAnalysis = true;
       try {
-        const settings = await kvGetJSON<Partial<GeneralSettings>>(kv, CF.SETTINGS_KEY, {
-          enableImageAnalysis: true,
-        });
+        const settings = await kvGetJSON<Partial<GeneralSettings>>(
+          kv,
+          CF.SETTINGS_KEY,
+          {
+            enableImageAnalysis: true,
+          }
+        );
         enableImageAnalysis = settings.enableImageAnalysis !== false;
       } catch (err) {
-        console.warn("[AI] Failed to read image analysis setting, using default enabled:", err);
+        console.warn(
+          "[AI] Failed to read image analysis setting, using default enabled:",
+          err
+        );
       }
 
       if (enableImageAnalysis) {
-        const enrichTask = analyzeImageAndEnrich(this.env, kv, key, processedFile, {
-          previewFileId: imageVariantIds.previewFileId,
-          tgFileId: tgFileId,
-        });
+        const enrichTask = analyzeImageAndEnrich(
+          this.env,
+          kv,
+          key,
+          processedFile,
+          {
+            previewFileId: imageVariantIds.previewFileId,
+            tgFileId: tgFileId,
+          }
+        );
         if (waitUntil) {
           waitUntil(enrichTask);
         } else {
-          enrichTask.catch((err) => console.warn("[AI] Background enrich failed:", err));
+          enrichTask.catch((err) =>
+            console.warn("[AI] Background enrich failed:", err)
+          );
         }
       }
     }
@@ -167,7 +178,7 @@ export class TGAdapter extends BaseAdapter {
     stream: ReadableStream,
     metadata: FileMetadata,
     waitUntil?: (p: Promise<any>) => void,
-    mimeType?: string,
+    mimeType?: string
   ): Promise<{ key: string }> {
     // Telegram 不支持流式上传，需要转为 Blob
     const response = new Response(stream);
@@ -185,7 +196,7 @@ export class TGAdapter extends BaseAdapter {
     chunkFile: File | Blob | Uint8Array,
     parentKey: string,
     chunkIndex: number,
-    fileName?: string,
+    fileName?: string
   ): Promise<{ chunkId: string; thumbUrl?: string }> {
     const formData = new FormData();
     formData.append("chat_id", this.env.TG_CHAT_ID);
@@ -195,66 +206,44 @@ export class TGAdapter extends BaseAdapter {
     if (chunkIndex === 0 && fileName) {
       // 如果是第一个分片且有文件名，使用原文件名以帮助Telegram识别文件类型（如视频）
       const blob =
-        chunkFile instanceof File ? chunkFile : new Blob([chunkFile as unknown as BlobPart]);
+        chunkFile instanceof File
+          ? chunkFile
+          : new Blob([chunkFile as unknown as BlobPart]);
       const type = chunkFile instanceof File ? chunkFile.type : undefined;
       fileToUpload = new File([blob], fileName, { type });
     } else if (chunkFile instanceof File) {
       fileToUpload = chunkFile;
     } else {
-      fileToUpload = new File([chunkFile as unknown as BlobPart], `part-${chunkIndex}`);
+      fileToUpload = new File(
+        [chunkFile as unknown as BlobPart],
+        `part-${chunkIndex}`
+      );
     }
 
     formData.append("document", fileToUpload);
 
-    const apiUrl = buildTgApiUrl(this.env.TG_BOT_TOKEN, "sendDocument");
+    const response = await this.sendToTelegram(formData, "sendDocument");
+    if (!response.success) throw new Error(response.message);
+    const result = response.data;
+    const chunkId = result.result.document.file_id;
+    let thumbUrl: string | undefined;
 
-    // 添加超时控制
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒超时
-
-    try {
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        body: formData,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      const result = await response.json();
-
-      if (!result.ok) {
-        throw new Error(
-          `Chunk ${chunkIndex} upload failed: ${result.description || "Unknown error"
-          }`,
-        );
+    // 尝试获取缩略图
+    if (chunkIndex === 0) {
+      const thumbFileId = getVideoThumbId(result);
+      if (thumbFileId) {
+        thumbUrl = `/file/${thumbFileId}/thumb`;
       }
-
-      const chunkId = result.result.document.file_id;
-      let thumbUrl: string | undefined;
-
-      // 尝试获取缩略图
-      if (chunkIndex === 0) {
-        const thumbFileId = getVideoThumbId(result);
-        if (thumbFileId) {
-          thumbUrl = `/file/${thumbFileId}/thumb`;
-        }
-      }
-
-      return { chunkId, thumbUrl };
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (error.name === "AbortError") {
-        throw new Error(`Chunk ${chunkIndex} upload timeout after 60s`);
-      }
-      throw error;
     }
+
+    return { chunkId, thumbUrl };
   }
 
-  async get(key: string, req?: Request): Promise<Response> {
+  async get(key: string, req?: Request, item?: FileRecord): Promise<Response> {
     const { fileId, isChunk } = getFileIdFromKey(key);
     const kv = this.env[this.kvName];
     // 优先获取 Metadata 判断文件类型
-    const { value, metadata } = await kv.getWithMetadata(key);
+    const { value, metadata } = item ?? (await kv.getWithMetadata(key));
 
     if (!metadata) {
       return failResponse(`Metadata not found for key: ${key}`, 404);
@@ -288,15 +277,22 @@ export class TGAdapter extends BaseAdapter {
 
       const headers = new Headers();
       headers.set("Content-Type", contentType);
-      headers.set("Content-Disposition", encodeContentDisposition(metadata.fileName));
+      headers.set(
+        "Content-Disposition",
+        encodeContentDisposition(metadata.fileName)
+      );
       headers.set("Cache-Control", "public, max-age=3600");
       headers.set("Accept-Ranges", "bytes");
 
       const range = req?.headers.get("Range") || null;
 
       const fetchFromTg = async (currentFilePath: string) => {
-        const tgUrl = buildTgFileUrl(this.env.TG_BOT_TOKEN, currentFilePath);
-        return range 
+        const tgUrl = buildTgFileUrl(
+          this.env.TG_BOT_TOKEN,
+          currentFilePath,
+          this.env.TG_API_BASE_URL
+        );
+        return range
           ? fetch(tgUrl, { headers: { Range: range } })
           : fetch(tgUrl);
       };
@@ -305,10 +301,16 @@ export class TGAdapter extends BaseAdapter {
 
       // Telegram 链接有效期 1 小时，如遇 401/404 错误则强制刷新缓存并重试一次
       if (tgResp.status === 401 || tgResp.status === 404) {
-        console.log(`[TGAdapter] TG URL expired or invalid (Status: ${tgResp.status}). Retrying for key: ${key}`);
+        await tgResp.body?.cancel();
+        console.log(
+          `[TGAdapter] TG URL expired or invalid (Status: ${tgResp.status}). Retrying for key: ${key}`
+        );
         filePath = await this.getCachedTgFilePath(fileId, true);
         if (!filePath) {
-          return failResponse(`File not found for key: ${key} after retry`, 404);
+          return failResponse(
+            `File not found for key: ${key} after retry`,
+            404
+          );
         }
         tgResp = await fetchFromTg(filePath);
       }
@@ -351,7 +353,6 @@ export class TGAdapter extends BaseAdapter {
       return failResponse("Invalid metadata: not a chunked file", 400);
     }
 
-
     // 解析 chunks
     let chunks: Chunk[] = [];
     try {
@@ -378,6 +379,12 @@ export class TGAdapter extends BaseAdapter {
       req?.headers.get("Range") || null,
       totalSize
     );
+    if (req?.headers.has("Range") && !rangeResult) {
+      return new Response(null, {
+        status: 416,
+        headers: { "Content-Range": `bytes */${totalSize}` },
+      });
+    }
 
     // 计算实际响应的字节范围
     const start = rangeResult ? rangeResult.start : 0;
@@ -385,111 +392,37 @@ export class TGAdapter extends BaseAdapter {
 
     // 准备上下文
     const botToken = this.env.TG_BOT_TOKEN;
-    const getFilePath = (fileId: string, forceRefresh = false) => this.getCachedTgFilePath(fileId, forceRefresh);
+    const apiBaseUrl = this.env.TG_API_BASE_URL;
+    const getFilePath = (fileId: string, forceRefresh = false) =>
+      this.getCachedTgFilePath(fileId, forceRefresh);
 
-    // 创建连续流
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          let currentOffset = 0;
-          let fetchPromise: Promise<Response> | null = null;
-          let nextChunkIdx = -1;
-
-          // 找到起始分片索引
-          let startChunkIdx = 0;
-          for (let i = 0; i < sortedChunks.length; i++) {
-            const chunk = sortedChunks[i];
-            const chunkEnd = currentOffset + chunk.size;
-            if (chunkEnd > start) {
-              startChunkIdx = i;
-              break;
-            }
-            currentOffset += chunk.size;
-          }
-
-          // 预读取第一个分片
-          if (startChunkIdx < sortedChunks.length) {
-            nextChunkIdx = startChunkIdx;
-          }
-
-          // 循环处理分片
-          for (let i = startChunkIdx; i < sortedChunks.length; i++) {
-            const chunk = sortedChunks[i];
-            const chunkStart = currentOffset;
-            const chunkEnd = currentOffset + chunk.size;
-
-            // 如果当前分片已经超出请求范围，停止
-            if (chunkStart > end) break;
-
-            // 触发当前分片的请求（如果还没触发）
-            // 或者如果已经有预读取的 promise，使用它
-            let response: Response;
-            
-            // 预读取逻辑：始终保持 fetchPromise 是下一个要处理的请求
-            // 在处理当前分片的同时，启动下一个分片的请求
-            const fetchChunk = async (c: Chunk, forceRefresh = false) => {
-               const filePath = await getFilePath(c.file_id, forceRefresh);
-               if (!filePath) throw new Error(`Missing chunk ${c.idx}`);
-               const url = buildTgFileUrl(botToken, filePath);
-               
-               // 计算该分片内的请求范围，并转换为相对于该分片的 Range
-               const reqStart = Math.max(chunkStart, start);
-               const reqEnd = Math.min(chunkEnd, end + 1);
-               const relativeStart = reqStart - chunkStart;
-               const relativeEnd = reqEnd - chunkStart;
-               
-               // 始终使用 Range 请求以减少带宽消耗 (TG API range 包含边界值)
-               const headers: HeadersInit = {
-                   "Range": `bytes=${relativeStart}-${relativeEnd - 1}`
-               };
-               
-               return fetch(url, { headers });
-            };
-
-            if (!fetchPromise) {
-                fetchPromise = fetchChunk(chunk);
-            }
-            
-            response = await fetchPromise;
-            fetchPromise = null; // 消费掉
-
-            // Telegram 链接有效期 1 小时，如遇 401/404 错误则强制刷新缓存并重试一次
-            if (response.status === 401 || response.status === 404) {
-                console.log(`[TGAdapter] Chunk ${chunk.idx} URL expired (Status: ${response.status}). Retrying...`);
-                response = await fetchChunk(chunk, true);
-            }
-
-            // 立即启动下一个分片的预读取
-            if (i + 1 < sortedChunks.length) {
-                const nextChunk = sortedChunks[i + 1];
-                const nextChunkStart = chunkEnd;
-                // 仅当下一个分片在请求范围内时才预读
-                if (nextChunkStart <= end) {
-                    fetchPromise = fetchChunk(nextChunk);
-                }
-            }
-
-            if (!response.ok || !response.body) {
-              throw new Error(`Failed to fetch chunk ${chunk.idx}`);
-            }
-
-            // 流式传输当前分片数据
-            const reader = response.body.getReader();
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              controller.enqueue(value);
-            }
-
-            currentOffset += chunk.size;
-          }
-
-          controller.close();
-        } catch (err) {
-          controller.error(err);
+    const stream = createChunkStream(
+      sortedChunks,
+      start,
+      end,
+      async (chunk, range, signal) => {
+        const fetchChunk = async (forceRefresh = false) => {
+          const filePath = await getFilePath(chunk.file_id, forceRefresh);
+          if (!filePath) throw new Error(`Missing chunk ${chunk.idx}`);
+          return fetch(buildTgFileUrl(botToken, filePath, apiBaseUrl), {
+            signal,
+            headers: {
+              Range: `bytes=${range.offset}-${range.offset + range.length - 1}`,
+            },
+          });
+        };
+        let response = await fetchChunk();
+        if (response.status === 401 || response.status === 404) {
+          await response.body?.cancel();
+          response = await fetchChunk(true);
         }
-      },
-    });
+        if (!response.ok || !response.body) {
+          await response.body?.cancel();
+          throw new Error(`Failed to fetch chunk ${chunk.idx}`);
+        }
+        return response.body;
+      }
+    );
 
     const hasRange = Boolean(req?.headers.get("Range"));
 
@@ -525,14 +458,25 @@ export class TGAdapter extends BaseAdapter {
     formData: FormData,
     apiEndpoint: string,
     retryCount = 3,
+    deadline = Date.now() + 120_000
   ): Promise<ApiResponse<any>> {
-    const apiUrl = buildTgApiUrl(this.env.TG_BOT_TOKEN, apiEndpoint);
+    const apiUrl = buildTgApiUrl(
+      this.env.TG_BOT_TOKEN,
+      apiEndpoint,
+      this.env.TG_API_BASE_URL
+    );
 
     try {
-      const response = await fetch(apiUrl, { method: "POST", body: formData });
-      const responseData = await response.json();
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        body: formData,
+        signal: AbortSignal.timeout(
+          Math.max(1, Math.min(60_000, deadline - Date.now()))
+        ),
+      });
+      const responseData = await response.json().catch(() => ({}));
 
-      if (response.ok) {
+      if (response.ok && responseData.ok) {
         return { success: true, data: responseData };
       }
 
@@ -547,10 +491,22 @@ export class TGAdapter extends BaseAdapter {
           ? Math.max(backoffMs, retryAfterSec * 1000)
           : backoffMs;
 
-      // 所有类型的文件上传失败都重试
+      const isPhotoFallback =
+        apiEndpoint === "sendPhoto" && response.status === 400;
+      const transient = response.status === 429 || response.status >= 500;
+      if (
+        (!transient && !isPhotoFallback) ||
+        waitMs > 30_000 ||
+        Date.now() + waitMs >= deadline
+      ) {
+        return {
+          success: false,
+          message: `Upload to Telegram failed: ${responseData.description || response.status}`,
+        };
+      }
       if (retryCount > 0) {
         // 图片类型特殊处理：转为文档方式重试
-        if (apiEndpoint === "sendPhoto") {
+        if (isPhotoFallback) {
           const newFormData = new FormData();
           newFormData.append("chat_id", formData.get("chat_id") as string);
           newFormData.append("document", formData.get("photo") as File);
@@ -559,29 +515,45 @@ export class TGAdapter extends BaseAdapter {
             newFormData,
             "sendDocument",
             retryCount - 1,
+            deadline
           );
         }
         // 其他类型直接重试
         await new Promise((resolve) => setTimeout(resolve, waitMs));
-        return await this.sendToTelegram(formData, apiEndpoint, retryCount - 1);
+        return await this.sendToTelegram(
+          formData,
+          apiEndpoint,
+          retryCount - 1,
+          deadline
+        );
       }
 
       return {
         success: false,
-        message: `Upload to Telegram failed: ${responseData.description || "Unknown error"
-          }`,
+        message: `Upload to Telegram failed: ${
+          responseData.description || "Unknown error"
+        }`,
       };
     } catch (error: any) {
-      if (retryCount > 0) {
+      if (
+        retryCount > 0 &&
+        Date.now() + Math.pow(2, 3 - retryCount) * 1000 < deadline
+      ) {
         const attempt = 3 - retryCount;
         const backoffMs = Math.min(30000, Math.pow(2, attempt) * 1000);
         await new Promise((resolve) => setTimeout(resolve, backoffMs));
-        return await this.sendToTelegram(formData, apiEndpoint, retryCount - 1);
+        return await this.sendToTelegram(
+          formData,
+          apiEndpoint,
+          retryCount - 1,
+          deadline
+        );
       }
       return {
         success: false,
-        message: `Network error occurred: ${error.message || "Unknown network error"
-          }`,
+        message: `Network error occurred: ${
+          error.message || "Unknown network error"
+        }`,
       };
     }
   }

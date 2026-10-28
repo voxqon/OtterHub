@@ -1,4 +1,4 @@
-import { FileMetadata, FileTag } from "@shared/types";
+import { FileMetadata, FileTag, trashPrefix } from "@shared/types";
 import { verifyJWT } from "@utils/auth";
 import { DBAdapterFactory } from "@utils/db-adapter";
 import { failResponse } from "@utils/response";
@@ -31,7 +31,9 @@ export async function getAuthorizedFileAccess(
     return failResponse("File not found", 404);
   }
 
-  const isPrivate = item.metadata.tags?.includes(FileTag.Private) ?? false;
+  const isPrivate =
+    key.startsWith(trashPrefix) ||
+    (item.metadata.tags?.includes(FileTag.Private) ?? false);
   if (!isPrivate) {
     return { db, item, isPrivate };
   }
