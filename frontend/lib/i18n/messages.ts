@@ -1,4 +1,127 @@
 export const english: Record<string, string> = {
+  "API 调用说明": "API documentation",
+  "API 密钥管理": "API keys",
+  刷新状态: "Refresh status",
+  获取密钥: "Get key",
+  重置密钥: "Reset key",
+  "当前 API 密钥": "Current API key",
+  隐藏密钥: "Hide key",
+  显示密钥: "Show key",
+  登录管理员账号: "Sign in as administrator",
+  "使用独立 Bearer 密钥授权文件增删改查。管理员可获取已有密钥，或重置生成新密钥；刷新状态不会更换密钥。":
+    "Use a dedicated Bearer key to manage files. Administrators can retrieve the current key or reset it to generate a new one. Refreshing status does not change the key.",
+  "获取密钥失败，请刷新状态；旧密钥或加密配置变化后需重置密钥。":
+    "Could not retrieve the key. Refresh the status; legacy keys or changed encryption settings require a key reset.",
+  "此密钥仅保存了摘要，请重置一次以启用密钥获取功能。":
+    "Only a hash was saved for this key. Reset it once to enable key retrieval.",
+  "权限和有效期在生成或重置密钥后生效。":
+    "Permissions and expiry take effect when you generate or reset the key.",
+  "密钥在服务端加密保存，只有管理员可以获取；认证使用 SHA-256 摘要。请通过 HTTPS 调用并妥善保存密钥，读取权限包含私有文件。重置和撤销受 KV 同步延迟影响。":
+    "Keys are encrypted on the server and only administrators can retrieve them. Authentication uses a SHA-256 hash. Use HTTPS and keep keys secure. Read access includes private files. Reset and revocation are subject to KV propagation delay.",
+  "上传单个文件，最大 20 MiB": "Upload one file, up to 20 MiB",
+  分页读取文件列表: "List files with pagination",
+  读取文件元数据: "Read file metadata",
+  "下载文件，支持 Range": "Download files with Range support",
+  "修改名称、标签、描述和收藏": "Edit names, tags, descriptions and favorites",
+  "移入回收站；permanent=true 永久删除":
+    "Move to trash; permanent=true deletes permanently",
+  初始化分段上传: "Initialize a chunked upload",
+  上传并确认一个分片: "Upload and confirm a chunk",
+  获取进度和续传凭据: "Get progress and resume receipts",
+  提交凭据并完成上传: "Submit receipts and complete the upload",
+  认证与开始: "Authentication and setup",
+  文件增删改查: "Manage files",
+  分段上传与续传: "Chunked uploads and resuming",
+  响应与错误: "Responses and errors",
+  文档目录: "Documentation contents",
+  "通过独立密钥管理文件，支持最大 1000 MiB 分段上传和断点续传。":
+    "Manage files with a dedicated key, with resumable chunked uploads up to 1000 MiB.",
+  "先在密钥管理页生成密钥并选择读取、写入或删除权限。每个请求携带 Authorization: Bearer <TOKEN>，无需管理员 Cookie。":
+    "Generate a key on the API keys page and select read, write or delete permissions. Send Authorization: Bearer <TOKEN> with each request. No administrator cookie is required.",
+  前往密钥管理: "Manage API keys",
+  "示例中的 BASE 是后端域名，TOKEN 替换为密钥；curl 示例使用 Bash。密钥获取、刷新状态、重置和撤销均在密钥管理页完成。":
+    "BASE is your backend origin and TOKEN is your API key. The curl examples use Bash. Retrieve keys, refresh status, reset or revoke keys on the API keys page.",
+  "所有路径均以 /api/v1 开头": "All paths start with /api/v1",
+  方法: "Method",
+  路径: "Path",
+  所需权限: "Required permission",
+  说明: "Description",
+  上传与查询: "Upload and read",
+  "普通上传使用 multipart/form-data，file 必填，tags 是 JSON 字符串，可选 private、nsfw；desc 最多 300 字符。文件名最多 128 字符，不含路径分隔符。单文件最大 20 MiB，较大文件使用分段上传。":
+    "Use multipart/form-data for direct uploads. file is required; tags is a JSON string with optional private and nsfw tags; desc allows up to 300 characters. Filenames allow up to 128 characters and no path separators. Direct uploads allow 20 MiB; use chunks for larger files.",
+  "列表使用 limit（1–1000，默认 50）、cursor 和 fileType（img、audio、video、doc）。将 data.cursor 编码后传入下一页，直到 data.list_complete 为 true；即使文件数组为空也可能还有下一页。":
+    "Lists accept limit (1–1000, default 50), cursor and fileType (img, audio, video, doc). URL-encode data.cursor for the next request until data.list_complete is true. Empty file arrays may still have another page.",
+  修改与删除: "Update and delete",
+  "PATCH 至少提供 fileName、tags、desc、liked 中的一项；tags 整体替换，[] 清空标签，不支持覆盖文件内容。DELETE 默认移入回收站，可在网页恢复；永久删除直接对现存文件追加 ?permanent=true。":
+    "PATCH requires at least one of fileName, tags, desc or liked. tags replaces all tags; [] clears them. File content cannot be replaced. DELETE moves to trash for restoration in the web UI. To permanently delete an active file, add ?permanent=true.",
+  "最大 1000 MiB（1,048,576,000 字节）": "Up to 1000 MiB (1,048,576,000 bytes)",
+  "每片 20 MiB（20,971,520 字节），最多 50 片；末片必须等于剩余字节。四个分段接口均要求 files:write，进度查询也可能完成文件合并。":
+    "Use 20 MiB (20,971,520 byte) chunks, up to 50 chunks. The last chunk must match the remaining bytes. All four chunk endpoints require files:write; checking progress may also finalize the file.",
+  "1. 初始化上传": "1. Initialize the upload",
+  "JSON 提供 fileType、fileName、fileSize 和 totalChunks，可选 tags、desc。totalChunks 必须等于 ceil(fileSize / 20971520)。响应 data 为原始上传 key，请保存以便续传。以下以 20 MiB 加 4 字节的文件为例。":
+    "Send JSON with fileType, fileName, fileSize and totalChunks, plus optional tags and desc. totalChunks must equal ceil(fileSize / 20971520). The response data is the raw upload key; keep it for resuming. This example uses a file of 20 MiB plus 4 bytes.",
+  "2. 逐片上传并保存 receipt": "2. Upload chunks and keep receipts",
+  "multipart 字段为 key、chunkIndex（从 0 开始）、chunkFile。接口等待存储确认后返回 data.receipt；保留所有凭据用于完成提交。同一 key 和索引可重试，已确认的分片会被复用。":
+    "Send multipart fields key, chunkIndex (starting at 0) and chunkFile. The endpoint returns data.receipt after storage confirms. Keep all receipts for completion. Retry with the same key and index to reuse confirmed chunks.",
+  "3. 断点续传": "3. Resume an upload",
+  "用原始 key 查询进度，data.uploadedIndices 表示已存分片，data.receipts 可用于完成提交；仅补传缺失索引。临时上传和凭据有效期为 1 小时，请在初始化后 1 小时内完成。KV 同步有延迟，刚上传的分片可能暂时未出现在进度中。":
+    "Query progress using the raw key. data.uploadedIndices lists stored chunks and data.receipts can complete the upload. Upload only missing indices. Temporary uploads and receipts last one hour; complete within one hour of initialization. KV propagation may temporarily hide recently uploaded chunks.",
+  "4. 提交完成": "4. Complete the upload",
+  "将同一文件的全部 receipt 放入 receipts 数组提交。成功返回 data 文件元数据；缺片、大小不符、凭据过期或混用其他文件的凭据会被拒绝。完成后通过 /files/{key}/content 下载，也支持跨分片 Range。":
+    "Submit all receipts for the same file in the receipts array. Success returns file metadata in data. Missing chunks, incorrect sizes, expired receipts and receipts from other files are rejected. Download through /files/{key}/content, including ranges across chunks.",
+  可运行的分段上传示例: "Runnable chunk upload example",
+  "下载 Node.js 20.9+ 示例，按 20 MiB 读取文件并保存本地续传状态。中断后对同一文件再次运行即可续传，状态文件不保存 API 密钥。":
+    "Download the Node.js 20.9+ example. It reads files in 20 MiB chunks and saves resume state locally. Run it again with the same file to resume. The state file does not store the API key.",
+  "普通上传成功为 HTTP 201，其余 JSON 成功响应为 HTTP 200。下载直接返回文件字节，Range 返回 206，不可满足的范围返回 416。":
+    "Direct uploads return HTTP 201; other successful JSON responses return HTTP 200. Downloads return file bytes. Range requests return 206, or 416 if unsatisfiable.",
+  "400：参数、文件大小与片数、分片长度或凭据无效。":
+    "400: Invalid parameters, file size/count, chunk lengths or receipts.",
+  "401：密钥缺失、无效、过期或已撤销；403：缺少所需权限。":
+    "401: Missing, invalid, expired or revoked key. 403: Missing required permission.",
+  "404：文件或上传不存在；413：请求体或分片过大；415：请求格式错误。":
+    "404: File or upload not found. 413: Body or chunk too large. 415: Unsupported content type.",
+  "500：服务配置或存储异常；503：分片存储或完成失败，可保留 key 和凭据稍后重试。":
+    "500: Server configuration or storage error. 503: Chunk storage or completion failed; keep the key and receipts and retry later.",
+  "读取权限可访问私有文件。请在可信服务端保存密钥并使用 HTTPS；API 密钥不能访问管理员设置。普通上传和初始化重试可能创建新文件，分段续传请始终复用同一 key。":
+    "Read access includes private files. Keep keys on trusted servers and use HTTPS. API keys cannot manage administrator settings. Retrying a direct upload or initialization can create a new file; always reuse the original key to resume chunks.",
+  签名上传接口: "Signed Upload API",
+  "获取文件 API 配置失败": "Could not load File API settings",
+  "生成新令牌后，旧令牌将失效。继续吗？":
+    "Generating a new token invalidates the previous token. Continue?",
+  "API 令牌已生成": "API token generated",
+  "生成 API 令牌失败": "Could not generate API token",
+  "停用文件 API 并撤销当前令牌？":
+    "Disable the File API and revoke the current token?",
+  "文件 API 已停用": "File API disabled",
+  "读取列表、元数据和文件内容": "Read lists, metadata and file contents",
+  "上传文件、修改名称和标签": "Upload files, edit names and tags",
+  移入回收站和永久删除: "Move to trash and permanently delete",
+  "文件管理 API": "File Management API",
+  "文件 API 已启用": "File API enabled",
+  "API 令牌已过期": "API token expired",
+  尚未配置令牌: "No token configured",
+  "使用独立 Bearer Token 调用文件增删改查接口，可分别授权读取、写入和删除。令牌只显示一次，服务端仅保存摘要。":
+    "Use a dedicated Bearer token to manage files, with separate read, write and delete permissions. The token is shown once; only its hash is stored.",
+  "当前权限：{0}": "Current permissions: {0}",
+  "令牌尾号：{0}": "Token ending: {0}",
+  "到期时间：{0}": "Expires: {0}",
+  永不过期: "Never expires",
+  新令牌权限: "New token permissions",
+  令牌有效期: "Token validity",
+  "{0} 天": "{0} days",
+  轮换令牌: "Rotate token",
+  "生成 API 令牌": "Generate API token",
+  "停用文件 API": "Disable File API",
+  "令牌仅显示一次，请立即保存到安全位置。":
+    "The token is shown only once. Save it securely now.",
+  复制令牌: "Copy token",
+  调用示例: "Request examples",
+  "单文件上传最大 20 MiB，支持 private、nsfw 标签和描述；PATCH 可修改 fileName、tags、desc、liked。删除默认移入回收站，追加 ?permanent=true 可永久删除。":
+    "Upload files up to 20 MiB with private/nsfw tags and descriptions. PATCH edits fileName, tags, desc and liked. DELETE moves to trash; add ?permanent=true to delete permanently.",
+  "KEY 使用返回的文件 key 并进行 URL 编码。列表使用 limit、cursor、fileType 分页；401 表示令牌无效或过期，403 表示权限不足。":
+    "URL-encode the returned file key as KEY. Lists support limit, cursor and fileType. 401 means an invalid or expired token; 403 means insufficient permissions.",
+  "请在可信服务端保存令牌并使用 HTTPS。读取权限可访问私有文件；轮换或停用受 KV 同步延迟影响。":
+    "Store tokens on a trusted server and use HTTPS. Read permission includes private files. Rotation and revocation are subject to KV propagation delay.",
   语言: "Language",
   "旧文件没有保存 Telegram 消息 ID，无法自动删除聊天消息，请在 Telegram 中手动清理。":
     "This older file has no saved Telegram message ID. Its chat message must be removed manually in Telegram.",

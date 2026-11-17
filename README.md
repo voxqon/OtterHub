@@ -63,8 +63,6 @@ OtterHub 是一个 **为个人使用场景定制** 的私人云盘方案：
 >
 > 限制：演示站的默认文件不可删，仅支持上传 ≤20MB 文件（1 小时自动清理）
 
-![网站截图](public/website-screenshot.png)
-
 ## ✨ 核心能力
 
 - **私人文件存储**：
@@ -89,6 +87,7 @@ OtterHub 是一个 **为个人使用场景定制** 的私人云盘方案：
 - **Telegram 频道上传**：频道 / 群内发送 ≤20MB 文件后自动注册到 OtterHub，并可回复直链
 - **AI 图片分析**：网页端上传图片后可自动生成简要描述，便于图片检索（需配置 Workers AI binding，可在设置页关闭）
 - **公共上传接口**：独立 HMAC-SHA256 密钥，只授权上传，不开放文件管理能力；见[公共上传接口文档](docs/public-api.md)
+- **文件管理 API**：独立 Bearer 密钥及读取、写入、删除权限；分段上传最大 1000 MiB。首页页脚可打开 `/api-docs/` 调用说明和 `/api-keys/` 密钥页，支持获取、刷新状态、重置与撤销；见[文件 API 文档](docs/file-api.md)
 - **多语言**：支持简体中文、英文，默认跟随浏览器语言；可在登录页或常规设置中切换，选择保存在当前浏览器。
 
 > 默认上传文件可通过直链公开访问。需要私密存储时，请在设置中将 `private` 设为默认上传标签，或编辑文件标签。回收站记录过期只会清理 KV 索引；Telegram 原消息、未完成上传产生的存储对象，以及过期回收站对应的 R2 对象没有定时清理任务。
@@ -177,7 +176,7 @@ TG_WEBHOOK_SECRET=your_secret   # 自定义 Webhook 校验密钥，建议 32 位
 > `TG_CHAT_ID` 和 `TG_BOT_TOKEN` 需在 Telegram 中获取。
 > 💡 详细流程可参考：[Telegraph-Image](https://github.com/cf-pages/Telegraph-Image)
 
-`PASSWORD` 用于网页登录，`JWT_SECRET` 用于登录会话及分片确认凭据，两者用途不同。`API_TOKEN` 具有管理权限，应保存在可信服务端。公共上传密钥通过设置页生成并保存在 KV，无需额外环境变量。
+`PASSWORD` 用于网页登录，`JWT_SECRET` 用于登录会话、分片确认凭据及文件 API 密钥的加密保存，两者用途不同。更换 `JWT_SECRET` 后需重置文件 API 密钥才能再次获取其原值。`API_TOKEN` 具有管理权限，应保存在可信服务端。公共上传及文件 API 密钥通过页面生成并保存在 KV，无需额外环境变量。
 
 若使用 R2，请不配置 `TG_BOT_TOKEN`，并绑定 R2 bucket，变量名为 `oh_file_r2`。R2 和 Telegram 共用 KV 元数据索引；切换存储不会迁移已有文件内容，需自行迁移数据。
 
@@ -321,13 +320,14 @@ KV 保存文件索引、元数据、分享记录、设置和临时分片确认�
 
 ### 访问、分享与回收站
 
-| 入口                                                                    | 访问要求                                                         |
-| ----------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| 文件列表、上传、编辑、删除、回收站管理、系统设置                        | 管理员 Cookie 或 `Authorization: Bearer <API_TOKEN>`             |
-| `/file/:key`、`/file/:key/download`                                     | 普通文件允许直链访问；`private` 文件及回收站文件必须管理员鉴权   |
-| `/share/:token/meta`、`/share/:token/raw`、`/share/:token/download-all` | 有效分享令牌；可临时访问已分享的私有文件                         |
-| `POST /public/upload`                                                   | 独立公共上传密钥签名，详见[公共上传接口文档](docs/public-api.md) |
-| `POST /telegram/webhook`                                                | 已配置 `TG_WEBHOOK_SECRET`，且校验头匹配                         |
+| 入口                                                                    | 访问要求                                                                                          |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 文件列表、上传、编辑、删除、回收站管理、系统设置                        | 管理员 Cookie 或 `Authorization: Bearer <API_TOKEN>`                                              |
+| `/file/:key`、`/file/:key/download`                                     | 普通文件允许直链访问；`private` 文件及回收站文件必须管理员鉴权                                    |
+| `/share/:token/meta`、`/share/:token/raw`、`/share/:token/download-all` | 有效分享令牌；可临时访问已分享的私有文件                                                          |
+| `POST /public/upload`                                                   | 独立公共上传密钥签名，详见[公共上传接口文档](docs/public-api.md)                                  |
+| `/api/v1/files*`、`/api/v1/upload/chunk*`                               | 独立 Bearer Token，按读取/写入/删除授权；分段接口均要求写入，详见[文件管理 API](docs/file-api.md) |
+| `POST /telegram/webhook`                                                | 已配置 `TG_WEBHOOK_SECRET`，且校验头匹配                                                          |
 
 创建分享使用 `POST /share/create`。`expireIn` 为至少 60 秒的整数，省略时创建永久分享；单文件用 `fileKey`，打包分享用 `type: "bundle"` 和 `fileKeys`。分享列表会遍历 KV 分页并过滤过期记录，ZIP 打包下载最多支持 50 个文件。
 
@@ -481,6 +481,7 @@ OtterHub/
 - [x] 随机壁纸获取（Wallhaven、Bing、Pixabay 等）
 - [x] API Token 支持 (通过 `API_TOKEN` 环境变量配置)
 - [x] 公共上传 API（HMAC-SHA256 签名，独立密钥生成、轮换与停用）
+- [x] 文件管理 API（Bearer Token、1000 MiB 分段上传、网页文档与密钥获取/重置/停用）
 - [ ] 申请 TG API ID，自建 Telegram Bot API Server, 单个文件下载上限可提升至 2GB
 - [ ] ~~TG Webhook 上传同步文件标签~~（会额外消耗一次 KV 读取额度）
 

@@ -1,0 +1,1492 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "OtterHub File Management API",
+    "version": "1.1.0",
+    "description": "Dedicated scoped Bearer token managed in Settings > Public API. All File API responses are private, no-store. One token per deployment; KV propagation can delay rotation and revocation. This specification is the machine-readable contract; docs/file-api.md provides integration examples. Web documentation: /api-docs/. Administrator key management: /api-keys/. Chunked uploads allow 1000 MiB (50 x 20 MiB)."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/api/v1/files": {
+      "get": {
+        "operationId": "listFiles",
+        "summary": "List active files",
+        "description": "Requires files:read. limit controls KV entries scanned; filtered pages may be empty. Continue until list_complete is true. Excludes trash, settings and shares.",
+        "security": [
+          {
+            "FileApiToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": ["files", "list_complete", "cursor"],
+                      "properties": {
+                        "files": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/File"
+                          }
+                        },
+                        "list_complete": {
+                          "type": "boolean"
+                        },
+                        "cursor": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          }
+        },
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "fileType",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["img", "audio", "video", "doc"]
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "uploadFile",
+        "summary": "Upload one file up to 20 MiB",
+        "description": "Required scope: files:write.",
+        "security": [
+          {
+            "FileApiToken": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/File"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "description": "File metadata URL",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "One file, up to 20,971,520 bytes; filename is 1–128 characters, without path separators or controls. Total multipart request limit is 20 MiB + 64 KiB."
+                  },
+                  "tags": {
+                    "type": "string",
+                    "description": "JSON array of private and/or nsfw tags. Defaults to [].",
+                    "example": "[\"private\"]"
+                  },
+                  "desc": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "default": ""
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{key}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/FileKey"
+        }
+      ],
+      "get": {
+        "operationId": "getFileMetadata",
+        "summary": "Read file metadata",
+        "description": "Required scope: files:read.",
+        "security": [
+          {
+            "FileApiToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/File"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateFileMetadata",
+        "summary": "Edit file metadata",
+        "description": "Requires files:write. Does not replace file bytes. At least one supported field is required; other fields are rejected. tags replaces all tags; removing private enables public links. JSON body limit: 16 KiB.",
+        "security": [
+          {
+            "FileApiToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/File"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataPatch"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteFile",
+        "summary": "Move to trash or permanently delete",
+        "description": "Requires files:delete. Defaults to moving to trash; permanent=true deletes backing storage and index. Telegram deletion remains subject to provider message age and permissions. Repeated deletion returns 404.",
+        "security": [
+          {
+            "FileApiToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": ["key", "deleted", "permanent"],
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "deleted": {
+                          "type": "boolean",
+                          "enum": [true]
+                        },
+                        "permanent": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          }
+        },
+        "parameters": [
+          {
+            "name": "permanent",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/files/{key}/content": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/FileKey"
+        }
+      ],
+      "get": {
+        "operationId": "downloadFile",
+        "summary": "Download file content, including private files",
+        "description": "Required scope: files:read.",
+        "security": [
+          {
+            "FileApiToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File content",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partial file content",
+            "headers": {
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "416": {
+            "description": "Unsatisfiable range",
+            "headers": {
+              "Content-Range": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          }
+        },
+        "parameters": [
+          {
+            "name": "Range",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            },
+            "example": "bytes=0-99"
+          }
+        ]
+      }
+    },
+    "/settings/file-api": {
+      "get": {
+        "operationId": "getFileApiTokenStatus",
+        "summary": "Read token status without revealing token or hash",
+        "security": [
+          {
+            "AdminBearer": []
+          },
+          {
+            "AdminCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TokenStatus"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "revokeFileApiToken",
+        "summary": "Revoke File API token",
+        "security": [
+          {
+            "AdminBearer": []
+          },
+          {
+            "AdminCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TokenStatus"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          }
+        }
+      }
+    },
+    "/settings/file-api/rotate": {
+      "post": {
+        "operationId": "rotateFileApiToken",
+        "summary": "Generate or rotate File API token",
+        "description": "Replaces any previous token. Admin credentials required; browser Origin must pass same-origin checks. Authentication stores a SHA-256 hash, with an AES-256-GCM encrypted copy for later administrator retrieval. Requires JWT_SECRET. Request limit: 4 KiB.",
+        "security": [
+          {
+            "AdminBearer": []
+          },
+          {
+            "AdminCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "scopes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "items": {
+                      "$ref": "#/components/schemas/Scope"
+                    },
+                    "default": ["files:read", "files:write"]
+                  },
+                  "expiresInDays": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 1,
+                    "maximum": 3650,
+                    "default": 90,
+                    "description": "null means no expiry."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": ["token", "status"],
+                      "properties": {
+                        "token": {
+                          "type": "string",
+                          "pattern": "^ohf_[a-f0-9]{64}$"
+                        },
+                        "status": {
+                          "$ref": "#/components/schemas/TokenStatus"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          }
+        }
+      }
+    },
+    "/api/v1/upload/chunk/init": {
+      "post": {
+        "operationId": "initializeChunkUpload",
+        "summary": "Initialize a resumable upload up to 1000 MiB",
+        "description": "Requires files:write. JSON limit: 8 KiB. Temporary session expires in one hour. Returns the raw file key in data. All non-final chunks must be 20 MiB, the final chunk must match the remainder.",
+        "security": [
+          {
+            "FileApiToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "type": "string",
+                      "maxLength": 512,
+                      "pattern": "^(img|audio|video|doc):chunk_[^/\\\\\\x00-\\x1f\\x7f]+$",
+                      "example": "doc:chunk_example.bin"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChunkUploadInit"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/upload/chunk": {
+      "post": {
+        "operationId": "uploadFileChunk",
+        "summary": "Store one chunk and receive its signed receipt",
+        "description": "Requires files:write. Multipart limit: 20 MiB + 64 KiB. Always waits for storage confirmation. Reuses a confirmed chunk for the same key/index; KV has no global exactly-once guarantee. Receipts expire after one hour.",
+        "security": [
+          {
+            "FileApiToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["chunkIndex", "receipt"],
+                      "properties": {
+                        "chunkIndex": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 49
+                        },
+                        "receipt": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["key", "chunkIndex", "chunkFile"],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "maxLength": 512,
+                    "pattern": "^(img|audio|video|doc):chunk_[^/\\\\\\x00-\\x1f\\x7f]+$",
+                    "example": "doc:chunk_example.bin"
+                  },
+                  "chunkIndex": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 49
+                  },
+                  "chunkFile": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "1–20,971,520 bytes; exact expected chunk length required"
+                  },
+                  "returnReceipt": {
+                    "type": "string",
+                    "enum": ["true", "false"],
+                    "description": "Optional page compatibility field. The scoped API always returns a receipt."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/upload/chunk/progress": {
+      "get": {
+        "operationId": "getChunkUploadProgress",
+        "summary": "Recover upload progress and signed receipts",
+        "description": "Requires files:write. May finalize a complete upload, therefore requires write scope. Recent receipts may be temporarily absent due to KV propagation. Keep receipts returned directly by upload operations.",
+        "security": [
+          {
+            "FileApiToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ChunkUploadProgress"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 512,
+              "pattern": "^(img|audio|video|doc):chunk_[^/\\\\\\x00-\\x1f\\x7f]+$",
+              "example": "doc:chunk_example.bin"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/upload/chunk/complete": {
+      "post": {
+        "operationId": "completeChunkUpload",
+        "summary": "Verify receipts and finalize the file",
+        "description": "Requires files:write. JSON limit: 128 KiB. Receipts must be valid, belong to this key, and provide all contiguous chunk indices with exact lengths. Repeat completion is supported. Returns completed file metadata without provider identifiers.",
+        "security": [
+          {
+            "FileApiToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "fileName",
+                        "fileSize",
+                        "uploadedAt",
+                        "liked",
+                        "tags"
+                      ],
+                      "properties": {
+                        "fileName": {
+                          "type": "string"
+                        },
+                        "fileSize": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "uploadedAt": {
+                          "type": "integer",
+                          "description": "Unix milliseconds"
+                        },
+                        "liked": {
+                          "type": "boolean"
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": ["private", "nsfw"]
+                          }
+                        },
+                        "desc": {
+                          "type": "string"
+                        },
+                        "chunkInfo": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer"
+                            },
+                            "uploadedIndices": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error413"
+          },
+          "415": {
+            "$ref": "#/components/responses/Error415"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChunkUploadComplete"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/settings/file-api/reveal": {
+      "post": {
+        "operationId": "revealFileApiToken",
+        "summary": "Explicitly retrieve the current File API key",
+        "description": "Administrator credentials and allowed browser Origin required. Returns no-store. Legacy hash-only tokens or changed JWT_SECRET require reset (409). Status polling never returns a token, ciphertext or hash.",
+        "security": [
+          {
+            "AdminBearer": []
+          },
+          {
+            "AdminCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["success", "data"],
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [true]
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": ["token", "status"],
+                      "properties": {
+                        "token": {
+                          "type": "string",
+                          "pattern": "^ohf_[a-f0-9]{64}$"
+                        },
+                        "status": {
+                          "$ref": "#/components/schemas/TokenStatus"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error401"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "500": {
+            "$ref": "#/components/responses/Error500"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "FileApiToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "ohf_<64 lowercase hex characters>",
+        "description": "Requires the operation's files:read, files:write or files:delete scope. Does not grant access to admin routes."
+      },
+      "AdminBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Existing administrator API_TOKEN environment binding."
+      },
+      "AdminCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "auth",
+        "description": "Administrator login cookie."
+      }
+    },
+    "parameters": {
+      "FileKey": {
+        "name": "key",
+        "in": "path",
+        "required": true,
+        "description": "URL-encoded active file key. Trash and internal namespaces are rejected.",
+        "schema": {
+          "type": "string",
+          "maxLength": 512,
+          "pattern": "^(img|audio|video|doc):[^/\\\\\\u0000-\\u001f\\u007f]+$"
+        }
+      }
+    },
+    "schemas": {
+      "Scope": {
+        "type": "string",
+        "enum": ["files:read", "files:write", "files:delete"]
+      },
+      "MetadataPatch": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^/\\\\\\u0000-\\u001f\\u007f]+$"
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 2,
+            "items": {
+              "type": "string",
+              "enum": ["private", "nsfw"]
+            }
+          },
+          "desc": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "liked": {
+            "type": "boolean"
+          }
+        }
+      },
+      "File": {
+        "type": "object",
+        "required": ["key", "metadata"],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "required": ["fileName", "fileSize", "uploadedAt", "liked", "tags"],
+            "properties": {
+              "fileName": {
+                "type": "string"
+              },
+              "fileSize": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "uploadedAt": {
+                "type": "integer",
+                "description": "Unix milliseconds"
+              },
+              "liked": {
+                "type": "boolean"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["private", "nsfw"]
+                }
+              },
+              "desc": {
+                "type": "string"
+              },
+              "chunkInfo": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer"
+                  },
+                  "uploadedIndices": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "TokenStatus": {
+        "type": "object",
+        "required": ["configured", "enabled", "scopes"],
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Scope"
+            }
+          },
+          "createdAt": {
+            "type": "integer",
+            "description": "Unix milliseconds"
+          },
+          "expiresAt": {
+            "type": "integer",
+            "description": "Unix milliseconds; absent for a token without expiry"
+          },
+          "fingerprint": {
+            "type": "string",
+            "description": "Last 8 token characters"
+          },
+          "recoverable": {
+            "type": "boolean",
+            "description": "An encrypted token is saved for explicit administrator retrieval. Legacy hash-only records require a reset."
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["success", "data", "message"],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [false]
+          },
+          "data": {
+            "nullable": true
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ChunkUploadInit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fileType", "fileName", "fileSize", "totalChunks"],
+        "properties": {
+          "fileType": {
+            "type": "string",
+            "enum": ["img", "audio", "video", "doc"]
+          },
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "No path separators or control characters"
+          },
+          "fileSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1048576000
+          },
+          "totalChunks": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Must equal ceil(fileSize / 20971520)"
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 2,
+            "default": [],
+            "items": {
+              "type": "string",
+              "enum": ["private", "nsfw"]
+            }
+          },
+          "desc": {
+            "type": "string",
+            "maxLength": 300,
+            "default": ""
+          }
+        }
+      },
+      "ChunkUploadProgress": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uploadedIndices",
+          "uploaded",
+          "total",
+          "complete",
+          "receipts"
+        ],
+        "properties": {
+          "uploadedIndices": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 49
+            }
+          },
+          "uploaded": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 50
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "receipts": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ChunkUploadComplete": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "receipts"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "maxLength": 512,
+            "pattern": "^(img|audio|video|doc):chunk_[^/\\\\\\x00-\\x1f\\x7f]+$",
+            "example": "doc:chunk_example.bin"
+          },
+          "receipts": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Error400": {
+        "description": "Invalid input",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error401": {
+        "description": "Invalid or expired credentials",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error403": {
+        "description": "Insufficient scope or forbidden Origin",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error404": {
+        "description": "File not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error413": {
+        "description": "Body or file too large",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error415": {
+        "description": "Unsupported content type",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error500": {
+        "description": "Storage or upstream operation failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error409": {
+        "description": "Token cannot be decrypted or only its hash was saved; administrator must reset it",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error503": {
+        "description": "Chunk storage, progress or finalization failed; retain the upload key and receipts to retry",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,12 +1,13 @@
-import { Hono } from 'hono';
-import { authMiddleware } from '../middleware/auth';
-import { CF } from 'types';
-import { GeneralSettings } from '@shared/types';
+import { Hono } from "hono";
+import { authMiddleware } from "../middleware/auth";
+import { CF } from "types";
+import { GeneralSettings } from "@shared/types";
 
-import { ok, fail } from '@utils/response';
-import { kvGetJSON } from '@utils/kv';
-import { Env } from 'types/hono';
-import { createMiddleware } from 'hono/factory';
+import { ok, fail } from "@utils/response";
+import { kvGetJSON } from "@utils/kv";
+import { Env } from "types/hono";
+import { createMiddleware } from "hono/factory";
+import { fileApiSettingsRoutes } from "./file-api-settings";
 
 function createSettingsRoutes<T>(
   app: Hono<{ Bindings: Env }>,
@@ -20,7 +21,7 @@ function createSettingsRoutes<T>(
   const getMsg = options?.getMessage ?? "获取配置失败";
   const postMsg = options?.postMessage ?? "配置已更新";
 
-  app.get(path, async c => {
+  app.get(path, async (c) => {
     try {
       const kv = c.env.oh_file_url;
       const data = await kvGetJSON<T>(kv, key, {} as T);
@@ -30,7 +31,7 @@ function createSettingsRoutes<T>(
     }
   });
 
-  app.post(path, async c => {
+  app.post(path, async (c) => {
     try {
       const kv = c.env.oh_file_url;
       const body = await c.req.json<T>();
@@ -44,68 +45,72 @@ function createSettingsRoutes<T>(
 
 export const settingsRoutes = new Hono<{ Bindings: Env }>();
 
-settingsRoutes.use('*', authMiddleware);
+settingsRoutes.use("*", authMiddleware);
 
 /* ========= Settings ========= */
 
-const PUBLIC_API_KEY = 'oh_public_api_secret';
+const PUBLIC_API_KEY = "oh_public_api_secret";
 
-const protectPublicApiSettings = createMiddleware<{ Bindings: Env }>(async (c, next) => {
-  const origin = c.req.header('Origin');
-  if (origin) {
-    const requestUrl = new URL(c.req.url);
-    let allowed = false;
-    try {
-      const originUrl = new URL(origin);
-      allowed = originUrl.origin === requestUrl.origin ||
-        (requestUrl.hostname === 'localhost' && originUrl.hostname === 'localhost' &&
-          originUrl.protocol === requestUrl.protocol);
-    } catch {
-      allowed = false;
+const protectPublicApiSettings = createMiddleware<{ Bindings: Env }>(
+  async (c, next) => {
+    const origin = c.req.header("Origin");
+    if (origin) {
+      const requestUrl = new URL(c.req.url);
+      let allowed = false;
+      try {
+        const originUrl = new URL(origin);
+        allowed =
+          originUrl.origin === requestUrl.origin ||
+          (requestUrl.hostname === "localhost" &&
+            originUrl.hostname === "localhost" &&
+            originUrl.protocol === requestUrl.protocol);
+      } catch {
+        allowed = false;
+      }
+      if (!allowed) return fail(c, "Cross-origin access denied", 403);
     }
-    if (!allowed) return fail(c, 'Cross-origin access denied', 403);
+    await next();
   }
-  await next();
-});
-settingsRoutes.use('/public-api', protectPublicApiSettings);
-settingsRoutes.use('/public-api/*', protectPublicApiSettings);
+);
+settingsRoutes.use("/public-api", protectPublicApiSettings);
+settingsRoutes.use("/public-api/*", protectPublicApiSettings);
+settingsRoutes.use("/file-api", protectPublicApiSettings);
+settingsRoutes.use("/file-api/*", protectPublicApiSettings);
+settingsRoutes.route("/file-api", fileApiSettingsRoutes);
 
-settingsRoutes.get('/public-api', async c => {
+settingsRoutes.get("/public-api", async (c) => {
   const secret = await c.env.oh_file_url.get(PUBLIC_API_KEY);
-  c.header('Cache-Control', 'no-store');
+  c.header("Cache-Control", "no-store");
   return ok(c, { configured: Boolean(secret) });
 });
 
-settingsRoutes.post('/public-api/rotate', async c => {
+settingsRoutes.post("/public-api/rotate", async (c) => {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const secret = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  const secret = Array.from(bytes, (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
   await c.env.oh_file_url.put(PUBLIC_API_KEY, secret);
-  c.header('Cache-Control', 'no-store');
+  c.header("Cache-Control", "no-store");
   return ok(c, { secret });
 });
 
-settingsRoutes.delete('/public-api', async c => {
+settingsRoutes.delete("/public-api", async (c) => {
   await c.env.oh_file_url.delete(PUBLIC_API_KEY);
-  c.header('Cache-Control', 'no-store');
+  c.header("Cache-Control", "no-store");
   return ok(c, { configured: false });
 });
 
 createSettingsRoutes<GeneralSettings>(
   settingsRoutes,
-  '/general',
+  "/general",
   CF.SETTINGS_KEY,
   {
-    getMessage: '获取常规设置失败',
-    postMessage: '常规设置已更新',
+    getMessage: "获取常规设置失败",
+    postMessage: "常规设置已更新",
   }
 );
 
-createSettingsRoutes(
-  settingsRoutes,
-  '/wallpaper',
-  CF.WALLPAPER_CONFIG_KEY,
-  {
-    getMessage: '获取壁纸配置失败',
-    postMessage: '壁纸配置已更新',
-  }
-);
+createSettingsRoutes(settingsRoutes, "/wallpaper", CF.WALLPAPER_CONFIG_KEY, {
+  getMessage: "获取壁纸配置失败",
+  postMessage: "壁纸配置已更新",
+});

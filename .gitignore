@@ -4,3 +4,18 @@ data
 .claude
 .trae
 .codebuddy
+
+# Local credentials and generated files
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+.DS_Store
+Thumbs.db

@@ -6,6 +6,7 @@ import { Copy, KeyRound, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { API_URL, unwrap } from "@/lib/api/config";
+import { FileApiPanel } from "./FileApiPanel";
 
 const signatureText = [
   "POST",
@@ -87,8 +88,9 @@ export function PublicApiTab() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto min-w-0 max-w-3xl space-y-6 pb-6">
+        <FileApiPanel />
         <div>
-          <h2 className="text-lg font-semibold">{t("公共接口")}</h2>
+          <h2 className="text-lg font-semibold">{t("签名上传接口")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {loading
               ? t("正在读取配置...")

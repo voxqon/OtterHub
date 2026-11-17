@@ -1,6 +1,7 @@
 import { ImageLoadMode } from "./wallpaper";
 
 export * from "./wallpaper";
+export * from "./file-api";
 
 // === 全局设置相关类型 ===
 

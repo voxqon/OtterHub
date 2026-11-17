@@ -10,6 +10,7 @@ import { proxyRoutes } from "./routes/proxy";
 import { shareRoutes } from "./routes/share";
 import { telegramWebhookRoutes } from "./routes/telegram/webhook";
 import { publicApiRoutes } from "./routes/public-api";
+import { fileApiRoutes } from "./routes/file-api";
 import { Hono } from "hono";
 import type { Env } from "./types/hono";
 
@@ -29,6 +30,7 @@ app.route("/health", healthRoutes);
 app.route("/wallpaper", wallpaperRoutes);
 app.route("/upload", uploadRoutes);
 app.route("/public", publicApiRoutes);
+app.route("/api/v1", fileApiRoutes);
 app.route("/trash", trashRoutes);
 app.route("/proxy", proxyRoutes);
 app.route("/share", shareRoutes);

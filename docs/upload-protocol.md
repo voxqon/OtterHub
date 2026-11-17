@@ -1,5 +1,11 @@
 # Confirmed chunk uploads
 
+The scoped File API exposes the same protocol at `/api/v1/upload/chunk*`, with
+`files:write` required for every operation, including progress. It always waits
+for chunk storage and returns receipts. Limits are 50 chunks of 20 MiB, or
+1000 MiB (1,048,576,000 bytes) per file. See [File API](file-api.md) and the web
+documentation at `/api-docs/`; manage dedicated keys at `/api-keys/`.
+
 Existing `POST /upload/chunk/init` and numeric `POST /upload/chunk` responses remain
 supported. New clients use this sequence:
 

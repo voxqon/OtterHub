@@ -42,6 +42,35 @@ The simulation must print its `listening` event before tests run. Its subsequent
 
 <!-- begin:observations -->
 
+2026-11-16 (scoped chunk uploads and key retrieval): The 68-test run passed
+against the existing Telegram HTTP member on port 4901 (CLI 1.75.0). Request
+events confirmed that the scoped API's chunk storage, private download and
+permanent deletion reached sendDocument, getFile, the file path and deleteMessage.
+The mock still serves four-byte fixtures, so this does not establish live
+Telegram upload limits. In a separate isolated Wrangler KV/R2 run, the downloadable
+`frontend/public/examples/file-api-upload.mjs` transferred an actual 1,048,576,000
+byte file in 50 chunks, was interrupted after the first confirmed chunk and
+resumed using its local state, then completed. The complete download matched
+the input SHA-256 `dce392d2721630ce889a73b5fe0b405748ebedf627cc57b6f457cb67e2ab5a66`.
+Private access, cross-chunk Range, permanent deletion, encrypted administrator
+key retrieval and plaintext-free status responses passed locally. Browser checks
+also confirmed documentation navigation, mobile layout, key generation,
+status refresh, retrieval of the same key, masking and reset to a different key.
+This is local R2 and simulated Telegram evidence, not production deployment,
+geographic KV consistency or live bot delivery evidence.
+
+2026-11-16 (scoped file API): Reused the existing Telegram member with CLI
+1.75.0 on local port 4901. The 61-test run passed with `TG_SIM_URL` set;
+`test/file-api.test.js` exercised the actual `/api/v1/files` routes through
+sendDocument, getFile, content download and deleteMessage. Request events and
+the fixture state confirmed that the uploaded private file was read and its
+message deleted before its KV index disappeared. Telegram was the only member
+and served all relevant calls. This establishes caller behavior against the
+existing four-byte fixture, not live bot permissions, message ages, upload
+limits or geographic KV consistency. A separate isolated Wrangler KV/R2 run
+verified upload, listing, private download, byte ranges, metadata updates,
+trash, permanent deletion, permission scopes, token rotation and revocation.
+
 2026-10-28 (duplicate uploads): Telegram, the only member, served both uploads
 returning the same file ID and both subsequent deletions in the passing 50-test
 run. Normal uploads, chunks, imported notices and failure retries also reached
